@@ -638,7 +638,7 @@ rule translation-unit {
 }
 
 proto rule external-declaration {*}
-#rule external-declaration:sym<function-definition> { <function-definition> }
+rule external-declaration:sym<function-definition> { <function-definition> }
 rule external-declaration:sym<declaration> { <declaration> }
 #rule external-declaration:sym<control-line> { <control-line> }
 
