@@ -11,7 +11,7 @@ Introduction
 
 If you would like to try it out, the recommended way is:
 
-  my $match = C::Parser::StdC11Parser.parse($source);
+`my $match = C::Parser::StdC11Parser.parse($source);`
 
 because I have plans to add non-standard extensions, such as Apple, GNU, MS, etc.
 
