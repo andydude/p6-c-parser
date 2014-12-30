@@ -1,5 +1,5 @@
 # References ISO/IEC 9899:1990 "Information technology - Programming Language C" (C89 for short)
-# use Grammar::Debugger;
+use Grammar::Debugger;
 use C::Parser::StdC11Lexer;
 grammar C::Parser::StdC11Parser is C::Parser::StdC11Lexer;
 
