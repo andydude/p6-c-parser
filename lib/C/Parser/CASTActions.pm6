@@ -1,5 +1,5 @@
 use C::Parser::CAST;
-class C::Parser::StdC11Actions;
+class C::Parser::CASTActions;
 
 method TOP($/) {
     make $/.values.[0].ast;
