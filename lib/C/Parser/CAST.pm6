@@ -298,19 +298,19 @@ class ForStatement is Statement is export {
     has Statement $.body;
 }
 
-class JumpStatement is Statement {
+class JumpStatement is Statement is export {
     has JumpTag $.tag;
     has Expression $.expr;
     has Str $.label;
 }
 
-class AssemblyOperand {
+class AssemblyOperand is export {
     has Identifier $.ident;
     has Str $.literal;
     has Expression $.expr;
 }
 
-class AssemblyStatement is Statement {
+class AssemblyStatement is Statement is export {
     has TypeQualifier $.qual;
     has Str $.literal;
     has Str @.clobbers;
@@ -320,29 +320,29 @@ class AssemblyStatement is Statement {
 
 # external declarations
 
-class ExternalDeclaration {}
+class ExternalDeclaration is export {}
 
-class Declaration is ExternalDeclaration {
+class Declaration is ExternalDeclaration is export {
     has DeclarationSpecifier @.modifiers;
     has InitDeclarator @.inits;
 }
 
-class TypeDefDeclaration is ExternalDeclaration {
+class TypeDefDeclaration is ExternalDeclaration is export {
     has DeclarationSpecifier @.specs;
     has Identifier $.ident;
 }
 
-class FunctionDeclaration is ExternalDeclaration {
+class FunctionDeclaration is ExternalDeclaration is export {
     has DeclarationSpecifier @.modifiers;
     has Declarator $.head;
     has Declaration @.ancients;
     has Statement $.body;
 }
 
-class AssemblyDeclaration is ExternalDeclaration {
+class AssemblyDeclaration is ExternalDeclaration is export {
     has Str $.literal;
 }
 
-class TranslationUnit {
+class TranslationUnit is export {
     has ExternalDeclaration @.decls;
 }
