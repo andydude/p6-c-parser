@@ -114,38 +114,58 @@ method postfix-expression-rest:sym<-->($/)  {
 
 
 # SS 6.5.5
-method multiplicative-expression {
+method multiplicative-expression($/) {
     make CAST::Op.new(
         :op($<multiplicative-operator>.ast),
         @<cast-expression>.ast
     );
 }
 
-# SS 6.5.6
-rule additive-expression {
-    <multiplicative-expression>
-    (<additive-operator> <multiplicative-expression>)*
-}
-proto rule additive-operator {*}
-rule additive-operator:sym<+> { <sym> }
-rule additive-operator:sym<-> { <sym> }
+## SS 6.5.6
+#rule additive-expression {
+#    <multiplicative-expression>
+#    (<additive-operator> <multiplicative-expression>)*
+#}
+#proto rule additive-operator {*}
+#rule additive-operator:sym<+> { <sym> }
+#rule additive-operator:sym<-> { <sym> }
+#
+## SS 6.5.7
+#rule shift-expression {
+#    <additive-expression>
+#    (<shift-operator> <additive-expression>)*
+#}
+#proto rule shift-operator {*}
+#rule shift-operator:sym«<<» { <sym> }
+#rule shift-operator:sym«>>» { <sym> }
+#
+## SS 6.5.8
+#rule relational-expression {
+#    <shift-expression>
+#    (<relational-operator> <shift-expression>)*
+#}
+#proto rule relational-operator {*}
+#rule relational-operator:sym«<»  { <sym> }
+#rule relational-operator:sym«>»  { <sym> }
+#rule relational-operator:sym«<=» { <sym> }
+#rule relational-operator:sym«>=» { <sym> }
 
-# SS 6.5.7
-rule shift-expression {
-    <additive-expression>
-    (<shift-operator> <additive-expression>)*
-}
-proto rule shift-operator {*}
-rule shift-operator:sym«<<» { <sym> }
-rule shift-operator:sym«>>» { <sym> }
 
-# SS 6.5.8
-rule relational-expression {
-    <shift-expression>
-    (<relational-operator> <shift-expression>)*
+
+method function-definition:sym<modern>($/) {
+    make FunctionDeclaration.new(
+        modifiers => @<declaration-specifiers>.ast,
+        head => $<declarator>.ast,
+        body => $<compound-statement>.ast,
+        ancients => []
+    )
 }
-proto rule relational-operator {*}
-rule relational-operator:sym«<»  { <sym> }
-rule relational-operator:sym«>»  { <sym> }
-rule relational-operator:sym«<=» { <sym> }
-rule relational-operator:sym«>=» { <sym> }
+
+method function-definition:sym<ancient>($/) {
+    make FunctionDeclaration.new(
+        modifiers => @<declaration-specifiers>.ast,
+        head => $<declarator>.ast,
+        ancients => $<declaration-list>.ast,
+        body => $<compound-statement>.ast
+    )
+}
