@@ -1,5 +1,5 @@
 use v6;
-module C::Parser::CAST;
+module C::Parser::CAST is export;
 
 #our %CDMap = {
 #    'post++' => 'prog2:post_increment',
@@ -45,252 +45,252 @@ module C::Parser::CAST;
 #};
 
 enum ExpressionTag <
-    post++
-    post--
-    pre++
-    pre--
-    pre&
-    pre*
-    pre+
-    pre-
-    bitnot
-    not
-    if_exp
-    times
-    divide
-    remainder
-    plus
-    minus
-    left_shift
-    right_shift
-    lt
-    gt
-    leq
-    geq
-    eq
-    neq
-    bitand
-    bitxor
-    bitor
-    and
-    or
-    =
-    times=
-    divide=
-    remainder=
-    plus=
-    minus=
-    left_shift=
-    right_shift=
-    bitand=
-    bitxor=
-    bitor=
+    ET_post++
+    ET_post--
+    ET_pre++
+    ET_pre--
+    ET_pre&
+    ET_pre*
+    ET_pre+
+    ET_pre-
+    ET_bitnot
+    ET_not
+    ET_if_exp
+    ET_times
+    ET_divide
+    ET_remainder
+    ET_plus
+    ET_minus
+    ET_left_shift
+    ET_right_shift
+    ET_lt
+    ET_gt
+    ET_leq
+    ET_geq
+    ET_eq
+    ET_neq
+    ET_bitand
+    ET_bitxor
+    ET_bitor
+    ET_and
+    ET_or
+    ET_=
+    ET_times=
+    ET_divide=
+    ET_remainder=
+    ET_plus=
+    ET_minus=
+    ET_left_shift=
+    ET_right_shift=
+    ET_bitand=
+    ET_bitxor=
+    ET_bitor=
 >;
 
 enum JumpTag <
-    break
-    continue
-    goto
-    goto*
-    return
+    JT_break
+    JT_continue
+    JT_goto
+    JT_goto_s
+    JT_return
 >;
 
 enum ConstantTag <
-    integer
-    real
-    enum
-    character
+    CT_integer
+    CT_real
+    CT_enum
+    CT_character
 >;
 
 enum StructureTag <
-    struct
-    union 
+    ST_struct
+    ST_union 
 >;
 
 enum StorageSpecifierTag <
-    auto
-    register
-    static
-    extern
-    typedef
-    thread_local
+    SS_auto
+    SS_register
+    SS_static
+    SS_extern
+    SS_typedef
+    SS_thread_local
 >;
 
 enum TypeSpecifierTag < 
-    void
-    char
-    short
-    int
-    long
-    float
-    double
-    signed
-    unsigned
-    bool
-    complex
-    struct
-    union
-    enum
-    typedef
-    typeof_expr    
+    TS_void
+    TS_char
+    TS_short
+    TS_int
+    TS_long
+    TS_float
+    TS_double
+    TS_signed
+    TS_unsigned
+    TS_bool
+    TS_complex
+    TS_struct
+    TS_union
+    TS_enum
+    TS_typedef
+    TS_typeof_expr    
 >;
 
 enum TypeQualifierTag <
-    const
-    volatile 
-    restrict 
-    inline 
-    attribute 
+    TQ_const
+    TQ_volatile 
+    TQ_restrict 
+    TQ_inline 
+    TQ_attribute 
 >;
 
 # forward declarations
 
-class Declaration {...}
+class Declaration is export {...}
 
-class Statement {}
+class Statement is export {}
 
-class Expression {}
+class Expression is export {}
 
 # declaration specifiers
 
-class DeclarationSpecifier {}
+class DeclarationSpecifier is export {}
 
-class StorageSpecifier is DeclarationSpecifier {
+class StorageSpecifier is DeclarationSpecifier is export {
     has StorageSpecifierTag $.tag;
 }
 
-class TypeSpecifier is DeclarationSpecifier {
+class TypeSpecifier is DeclarationSpecifier is export {
     has TypeSpecifierTag $.tag;
 }
 
-class TypeQualifier is DeclarationSpecifier {
+class TypeQualifier is DeclarationSpecifier is export {
     has TypeQualifierTag $.tag;
 }
 
-class PrimaryExpression is Expression {}
+class PrimaryExpression is Expression is export {}
 
-class Identifier is PrimaryExpression {
+class Identifier is PrimaryExpression is export {
     has Str $.name;
 }
 
-class Constant is PrimaryExpression {
+class Constant is PrimaryExpression is export {
     has ConstantTag $.type;
     has Identifier $.ident;
     has Num $.value; # WTF
 }
 
-class StringLiteral is PrimaryExpression {
+class StringLiteral is PrimaryExpression is export {
     has Str $.literal;
 }
 
-class GenericAssociation {
+class GenericAssociation is export {
     has Identifier $.ident;
     has Expression $.expr;
 }
 
-class GenericSelection is PrimaryExpression {
+class GenericSelection is PrimaryExpression is export {
     has Expression $.expr;
     has GenericAssociation @.assocs;
 }
 
-class PostfixExpression is Expression {}
+class PostfixExpression is Expression is export {}
 
-class InitializerMember {}
+class InitializerMember is export {}
 
-class Attribute {
+class Attribute is export {
     has Identifier $.ident;
     has Expression @.args;
 }
 
-class Declarator {
+class Declarator is export {
     has Bool $.pointer;
 }
 
-class Designation {
+class Designation is export {
     has Declarator @.decrs;
 }
 
-class Initializer {
+class Initializer is export {
     has Expression $.expr;
     has InitializerMember @.inits;
 }
 
-class DesignationInitializer is InitializerMember {
+class DesignationInitializer is InitializerMember is export {
     has Designation $.dsgn;
     has Initializer $.init;
 }
 
-class InitDeclarator {
+class InitDeclarator is export {
     has Declarator $.decl;
     has Initializer $.init;
     has Expression $.expr;
 }
 
-class PointerDeclarator is Declarator {
+class PointerDeclarator is Declarator is export {
     has TypeQualifier @.quals;
 }
 
-class ArrayDeclarator is Declarator {
+class ArrayDeclarator is Declarator is export {
     has TypeQualifier @.quals;
     has Expression $.size;
 }
 
-class FunctionDeclarator is Declarator {
+class FunctionDeclarator is Declarator is export {
     has Identifier $.ident;
     has Declaration @.decls;
     has Attribute @.attrs;
     has Bool $.ancient;
 }
 
-class LabeledStatement is Statement {
+class LabeledStatement is Statement is export {
     has Identifier $.ident;
     has Statement $.stmt;
 }
 
-class SwitchStatement is Statement {
+class SwitchStatement is Statement is export {
     has Expression $.expr;
     has Statement @.stmts;
 }
 
-class CaseStatement is Statement {
+class CaseStatement is Statement is export {
     has Expression $.expr;
     has Statement $.stmt;
 }
 
-class CasesStatement is Statement {
+class CasesStatement is Statement is export {
     has Expression $.from;
     has Expression $.expr;
     has Statement $.stmt;
 }
 
-class DefaultStatement is Statement {
+class DefaultStatement is Statement is export {
     has Statement $.stmt;
 }
 
-class BlockItem {
+class BlockItem is export {
     has Declaration $.decl;
     has Statement $.stmt;
 }
 
-class BlockStatement is Statement {
+class BlockStatement is Statement is export {
     has BlockItem @.items;
 }
 
-class ExpressionStatement is Statement {
+class ExpressionStatement is Statement is export {
     has Expression $.expr;
 }
 
-class WhileStatement is Statement {
+class WhileStatement is Statement is export {
     has Expression $.test;
     has Statement $.body;
 }
 
-class DoWhileStatement is Statement {
+class DoWhileStatement is Statement is export {
     has Statement $.body;
     has Expression $.test;
 }
 
-class ForStatement is Statement {
+class ForStatement is Statement is export {
     has Declaration $.decl; # C99 init
     has Expression $.init;  # C89 init
     has Expression $.test;
