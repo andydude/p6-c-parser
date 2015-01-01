@@ -1,5 +1,6 @@
-#!/usr/bin/env perl6 -I lib
+#!/usr/bin/env perl6
 use v6;
+use lib 'lib';
 use C::Parser::CASTActions;
 use C::Parser::StdC11Lexer;
 use C::Parser::StdC11Parser;
