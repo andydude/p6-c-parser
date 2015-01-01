@@ -11,7 +11,7 @@ sub MAIN (Str $input = "-",
     Bool :$lexonly = False,
     Bool :$preproc = False)
 {
-    my $source = ($input eq "-") ?? slurp("/dev/stdin") !! slurp($input);
+    my Str $source = ($input eq "-") ?? slurp("/dev/stdin") !! slurp($input);
     my $parser = $lexonly ?? C::Parser::StdC11Lexer !! C::Parser::StdC11Parser;
     my $ast;
 
@@ -19,6 +19,8 @@ sub MAIN (Str $input = "-",
     #    # preprocess
     #}
 
+    say $source;
+    
     given $actions {
         when "nil" {
             $ast = $parser.parse($source);

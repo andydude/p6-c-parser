@@ -1,6 +1,6 @@
 # References ISO/IEC 9899:1990 "Information technology - Programming Language C" (C89 for short)
 use v6;
-use Grammar::Tracer;
+#use Grammar::Tracer;
 use C::Parser::StdC11Lexer;
 grammar C::Parser::StdC11Parser is C::Parser::StdC11Lexer;
 
@@ -253,9 +253,9 @@ rule declaration:sym<static_assert> { # C11
 }
 
 rule declaration-specifiers {
-    #{ say "declaration-specifiers 1"; }
+    { say "declaration-specifiers 1"; }
     <declaration-specifier>+
-    #{ say "declaration-specifiers 2"; }
+    { say "declaration-specifiers 2"; }
     {
         if $*TYPEDEF_CONTEXT {
             #my $typedef_name = $<declaration-specifier>[*-1]<type-specifier><typedef-name><ident><name>.Str;
@@ -264,6 +264,7 @@ rule declaration-specifiers {
             $*TYPEDEF_CONTEXT = False;
         }
     }
+    { say "declaration-specifiers 3"; }
 }
 
 # Nonstandard: declaration-specifier does not exist in C89 grammar
@@ -271,19 +272,29 @@ rule declaration-specifiers {
 # so we factor it out as <declaration-specifier>+ which means the same.
 proto rule declaration-specifier {*}
 rule declaration-specifier:sym<storage-class> {
+    { say "declaration-specifier:sym<storage-class> 1"; }
     <storage-class-specifier>
+    { say "declaration-specifier:sym<storage-class> 2"; }
 }
 rule declaration-specifier:sym<type-specifier> {
+    { say "declaration-specifier:sym<type-specifier> 1"; }
     <type-specifier>
+    { say "declaration-specifier:sym<type-specifier> 2"; }
 }
 rule declaration-specifier:sym<type-qualifier> {
+    { say "declaration-specifier:sym<type-qualifier> 1"; }
     <type-qualifier>
+    { say "declaration-specifier:sym<type-qualifier> 2"; }
 }
 rule declaration-specifier:sym<function> {
+    { say "declaration-specifier:sym<function> 1"; }
     <function-specifier>
+    { say "declaration-specifier:sym<function> 2"; }
 }
 rule declaration-specifier:sym<alignment> {
+    { say "declaration-specifier:sym<alignment> 1"; }
     <alignment-specifier>
+    { say "declaration-specifier:sym<alignment> 2"; }
 }
 
 rule init-declarator-list { <init-declarator> [',' <init-declarator>]* }
@@ -312,40 +323,43 @@ rule type-specifier:sym<unsigned> { <sym> }
 rule type-specifier:sym<_Bool>    { <sym> }
 rule type-specifier:sym<_Complex> { <sym> }
 rule type-specifier:sym<atomic-type>     {
+    { say "type-specifier:sym<atomic-type> 1"; }
     <atomic-type-specifier>
+    { say "type-specifier:sym<atomic-type> 1"; }
 }
 rule type-specifier:sym<struct-or-union> {
-    #{ say "type-specifier:sym<struct-or-union> 1"; }
+    { say "type-specifier:sym<struct-or-union> 1"; }
     <struct-or-union-specifier>
-    #{ say "type-specifier:sym<struct-or-union> 2"; }
+    { say "type-specifier:sym<struct-or-union> 2"; }
 }
 # TODO
 rule type-specifier:sym<enum-specifier>  {
-    #{ say "type-specifier:sym<enum-specifier> 1"; }
+    { say "type-specifier:sym<enum-specifier> 1"; }
     <enum-specifier>
-    #{ say "type-specifier:sym<enum-specifier> 2"; }
+    { say "type-specifier:sym<enum-specifier> 2"; }
 }
 rule type-specifier:sym<typedef-name>    {
-    #{ say "type-specifier:sym<typedef-name> 1"; }
+    { say "type-specifier:sym<typedef-name> 1"; }
     <typedef-name>
-    #{ say "type-specifier:sym<typedef-name> 2" ~ $<typedef-name>; }
+    { say "type-specifier:sym<typedef-name> 2" ~ $<typedef-name>; }
+    #<?{ ($*TYPEDEF_CONTEXT) || (%*TYPEDEFS{$<typedef-name><ident><name>.Str}:exists) }>
     <?{ ($*TYPEDEF_CONTEXT) || (%*TYPEDEFS{$<typedef-name><ident><name>.Str}:exists) }>
-    #{ say "type-specifier:sym<typedef-name> 3"; }
+    { say "type-specifier:sym<typedef-name> 3"; }
 }
 # TODO: add check for if it's been typedef'd
 
 # SS 6.7.2.1
 proto rule struct-or-union-specifier {*}
 rule struct-or-union-specifier:sym<decl> {
-    #{ say "struct-or-union-specifier:sym<decl> 1"; }
+    { say "struct-or-union-specifier:sym<decl> 1"; }
     <struct-or-union> <ident>?
     '{' <struct-declaration-list> '}'
-    #{ say "struct-or-union-specifier:sym<decl> 2"; }
+    { say "struct-or-union-specifier:sym<decl> 2"; }
 }
 rule struct-or-union-specifier:sym<spec> {
-    #{ say "struct-or-union-specifier:sym<spec> 1"; }
+    { say "struct-or-union-specifier:sym<spec> 1"; }
     <struct-or-union> <ident> <!before '{'>
-    #{ say "struct-or-union-specifier:sym<spec> 2"; }
+    { say "struct-or-union-specifier:sym<spec> 2"; }
 }
 
 proto rule struct-or-union {*}
@@ -395,10 +409,15 @@ rule struct-declarator:sym<bit-declarator> {
 # SS 6.7.2.2
 proto rule enum-specifier {*}
 rule enum-specifier:sym<decl> {
+    { say "enum-specifier:sym<decl> 1"; }
     <enum-keyword> <ident>?
+    { say "enum-specifier:sym<decl> 2"; }
     '{'
+    { say "enum-specifier:sym<decl> 3"; }
     <enumerator-list> ','?
+    { say "enum-specifier:sym<decl> 4"; }
     '}'
+    { say "enum-specifier:sym<decl> 5"; }
 }
 rule enum-specifier:sym<spec> {
     <enum-keyword> <ident> <!before '{'>
@@ -413,10 +432,15 @@ rule enumerator {
 # SS 6.7.2.4
 proto rule atomic-type-specifier {*} # C11
 rule atomic-type-specifier:sym<_Atomic> {
+    { say "atomic-type-specifier:sym<_Atomic> 1"; }
     <atomic-keyword>
+    { say "atomic-type-specifier:sym<_Atomic> 2"; }
     '('
+    { say "atomic-type-specifier:sym<_Atomic> 3"; }
     <type-name>
+    { say "atomic-type-specifier:sym<_Atomic> 4"; }
     ')'
+    { say "atomic-type-specifier:sym<_Atomic> 5"; }
 }
 
 # SS 6.7.3
@@ -434,12 +458,18 @@ rule function-specifier:sym<_Noreturn> { <sym> }
 # SS 6.7.5
 proto rule alignment-specifier {*}
 rule alignment-specifier:sym<type-name> {
+    { say "alignment-specifier:sym<type-name> 1"; }
     <alignas-keyword>
+    { say "alignment-specifier:sym<type-name> 2"; }
     '(' <type-name> ')'
+    { say "alignment-specifier:sym<type-name> 3"; }
 }
 rule alignment-specifier:sym<constant> {
+    { say "alignment-specifier:sym<constant> 1"; }
     <alignas-keyword>
+    { say "alignment-specifier:sym<constant> 2"; }
     '(' <constant-expression> ')'
+    { say "alignment-specifier:sym<constant> 3"; }
 }
 
 # SS 6.7.6
@@ -732,34 +762,38 @@ rule translation-unit {
 
 proto rule external-declaration {*}
 rule external-declaration:sym<function-definition> {
+    { say "external-declaration:sym<function-definition> 1"; }
     <function-definition>
+    { say "external-declaration:sym<function-definition> 2"; }
 }
 rule external-declaration:sym<declaration> {
+    { say "external-declaration:sym<declaration> 1"; }
     <declaration>
+    { say "external-declaration:sym<declaration> 2"; }
 }
 #rule external-declaration:sym<control-line> { <control-line> }
 
 # SS 6.9.1
 proto rule function-definition {*}
 rule function-definition:sym<modern> {
-    #{ say "function-definition:sym<modern> 1"; }
+    { say "function-definition:sym<modern> 1"; }
     <declaration-specifiers>
-    #{ say "function-definition:sym<modern> 2"; }
+    { say "function-definition:sym<modern> 2"; }
     <declarator>
-    #{ say "function-definition:sym<modern> 3"; }
+    { say "function-definition:sym<modern> 3"; }
     <compound-statement>
-    #{ say "function-definition:sym<modern> 4"; }
+    { say "function-definition:sym<modern> 4"; }
 }
 rule function-definition:sym<ancient> {
-    #{ say "function-definition:sym<ancient> 1"; }
+    { say "function-definition:sym<ancient> 1"; }
     <declaration-specifiers>
-    #{ say "function-definition:sym<ancient> 2"; }
+    { say "function-definition:sym<ancient> 2"; }
     <declarator>
-    #{ say "function-definition:sym<ancient> 3"; }
+    { say "function-definition:sym<ancient> 3"; }
     <declaration-list>
-    #{ say "function-definition:sym<ancient> 4"; }
+    { say "function-definition:sym<ancient> 4"; }
     <compound-statement>
-    #{ say "function-definition:sym<ancient> 5"; }
+    { say "function-definition:sym<ancient> 5"; }
 }
 
 rule declaration-list { <declaration>+ }
