@@ -4,10 +4,6 @@ use v6;
 use C::Parser::StdC11Lexer;
 grammar C::Parser::StdC11Parser is C::Parser::StdC11Lexer;
 
-my $*EXTERN_CONTEXT = False;
-my $*STATIC_CONTEXT = False;
-my %*STRUCTS;
-
 rule TOP {^ <translation-unit> $}
 
 # SS 6.5.1
@@ -60,22 +56,22 @@ proto rule postfix-expression-first {*}
 rule postfix-expression-first:sym<primary> { <primary-expression> }
 rule postfix-expression-first:sym<initializer> {
     '('
-    <type-name>
+    <operator=type-name>
     ')'
     '{'
-    <initializer-list> ','?
+    <operands=initializer-list> ','?
     '}'
 }
 
 proto rule postfix-expression-rest {*}
 rule postfix-expression-rest:sym<[ ]> {
     '['
-    <expression>
+    <operand=expression>
     ']'
 }
 rule postfix-expression-rest:sym<( )> {
     '('
-    <argument-expression-list>?
+    <operands=argument-expression-list>?
     ')'
 }
 rule postfix-expression-rest:sym<.>   { <sym> <ident> }
@@ -90,13 +86,13 @@ rule argument-expression-list {
 # SS 6.5.3
 proto rule unary-expression {*}
 rule unary-expression:sym<postfix> { <postfix-expression> }
-rule unary-expression:sym<++> { <sym> <unary-expression> }
-rule unary-expression:sym<--> { <sym> <unary-expression> }
+rule unary-expression:sym<++> { <sym> <operand=unary-expression> }
+rule unary-expression:sym<--> { <sym> <operand=unary-expression> }
 rule unary-expression:sym<unary-cast> {
-    <unary-operator> <cast-expression>
+    <operator=unary-operator> <operand=cast-expression>
 }
 rule unary-expression:sym<size-of-expr> {
-    <sizeof-keyword> <unary-expression>
+    <operator=sizeof-keyword> <operand=unary-expression>
 }
 rule unary-expression:sym<size-of-type> {
     <sizeof-keyword> '(' <type-name> ')'
@@ -114,7 +110,9 @@ rule unary-operator:sym<~> { <sym> }
 rule unary-operator:sym<!> { <sym> }
 
 # SS 6.5.4
-rule cast-expression { <cast-operator>* <unary-expression> }
+rule cast-expression {
+    <operators=cast-operator>* <operand=unary-expression>
+}
 
 # Nonstandard: cast-operator does not exist in C89 grammar
 # Rationale: these tokens appear in many rules, and although
@@ -124,8 +122,8 @@ rule cast-operator { '(' <type-name> ')' }
 
 # SS 6.5.5
 rule multiplicative-expression {
-    <cast-expression>
-    (<multiplicative-operator> <cast-expression>)*
+    <operands=cast-expression>
+    [<operators=multiplicative-operator> <operands=cast-expression>]*
 }
 proto rule multiplicative-operator {*}
 rule multiplicative-operator:sym<*> { <sym> }
@@ -134,8 +132,8 @@ rule multiplicative-operator:sym<%> { <sym> }
 
 # SS 6.5.6
 rule additive-expression {
-    <multiplicative-expression>
-    (<additive-operator> <multiplicative-expression>)*
+    <operands=multiplicative-expression>
+    [<operators=additive-operator> <operands=multiplicative-expression>]*
 }
 proto rule additive-operator {*}
 rule additive-operator:sym<+> { <sym> }
@@ -143,8 +141,8 @@ rule additive-operator:sym<-> { <sym> }
 
 # SS 6.5.7
 rule shift-expression {
-    <additive-expression>
-    (<shift-operator> <additive-expression>)*
+    <operands=additive-expression>
+    [<operators=shift-operator> <operands=additive-expression>]*
 }
 proto rule shift-operator {*}
 rule shift-operator:sym«<<» { <sym> }
@@ -152,8 +150,8 @@ rule shift-operator:sym«>>» { <sym> }
 
 # SS 6.5.8
 rule relational-expression {
-    <shift-expression>
-    (<relational-operator> <shift-expression>)*
+    <operands=shift-expression>
+    [<operators=relational-operator> <operands=shift-expression>]*
 }
 proto rule relational-operator {*}
 rule relational-operator:sym«<»  { <sym> }
@@ -163,8 +161,8 @@ rule relational-operator:sym«>=» { <sym> }
 
 # SS 6.5.9
 rule equality-expression {
-    <relational-expression>
-    (<equality-operator> <relational-expression>)*
+    <operands=relational-expression>
+    [<operators=equality-operator> <operands=relational-expression>]*
 }
 proto rule equality-operator {*}
 rule equality-operator:sym<==> { <sym> }
@@ -172,16 +170,16 @@ rule equality-operator:sym<!=> { <sym> }
 
 # SS 6.5.10
 rule and-expression {
-    <equality-expression>
-    (<and-operator> <equality-expression>)*
+    <operands=equality-expression>
+    [<operators=and-operator> <operands=equality-expression>]*
 }
 proto rule and-operator {*}
 rule and-operator:sym<&> { <sym> }
 
 # SS 6.5.11
 rule exclusive-or-expression {
-    <and-expression>
-    (<exclusive-or-operator> <and-expression>)*
+    <operands=and-expression>
+    [<operators=exclusive-or-operator> <operands=and-expression>]*
 }
 
 proto rule exclusive-or-operator {*}
@@ -189,38 +187,38 @@ rule exclusive-or-operator:sym<^> { <sym> }
 
 # SS 6.5.12
 rule inclusive-or-expression {
-    <exclusive-or-expression>
-    (<inclusive-or-operator> <exclusive-or-expression>)*
+    <operands=exclusive-or-expression>
+    [<operators=inclusive-or-operator> <operands=exclusive-or-expression>]*
 }
 proto rule inclusive-or-operator {*}
 rule inclusive-or-operator:sym<|> { <sym> }
 
 # SS 6.5.13
 rule logical-and-expression {
-    <inclusive-or-expression>
-    (<logical-and-operator> <inclusive-or-expression>)*
+    <operands=inclusive-or-expression>
+    [<operators=logical-and-operator> <operands=inclusive-or-expression>]*
 }
 proto rule logical-and-operator {*}
 rule logical-and-operator:sym<&&> { <sym> }
 
 # SS 6.5.14
 rule logical-or-expression {
-    <logical-and-expression>
-    (<logical-or-operator> <logical-and-expression>)*
+    <operands=logical-and-expression>
+    [<operators=logical-or-operator> <operands=logical-and-expression>]*
 }
 proto rule logical-or-operator {*}
 rule logical-or-operator:sym<||> { <sym> }
 
 # SS 6.5.15
 rule conditional-expression {
-    <logical-or-expression>
-    ('?' <expression> ':' <conditional-expression>)?
+    <operands=logical-or-expression>
+    ['?' <operands=expression> ':' <operands=conditional-expression>]?
 }
 
 # SS 6.5.16
 rule assignment-expression {
-    (<unary-expression> <assignment-operator>)*
-    <conditional-expression>
+    [<operands=unary-expression> <operators=assignment-operator>]*
+    <operands=conditional-expression>
 }
 proto rule assignment-operator {*}
 rule assignment-operator:sym<=>   { <sym> }
@@ -237,7 +235,7 @@ rule assignment-operator:sym<|=>  { <sym> }
 
 # SS 6.5.17
 rule expression {
-    <assignment-expression> [',' <assignment-expression>]*
+    <operands=assignment-expression> [',' <operands=assignment-expression>]*
 }
 
 # SS 6.6
@@ -253,18 +251,18 @@ rule declaration:sym<static_assert> { # C11
 }
 
 rule declaration-specifiers {
-    { say "declaration-specifiers 1"; }
+    #{ say "declaration-specifiers 1"; }
     <declaration-specifier>+
-    { say "declaration-specifiers 2"; }
+    #{ say "declaration-specifiers 2"; }
     {
         if $*TYPEDEF_CONTEXT {
-            #my $typedef_name = $<declaration-specifier>[*-1]<type-specifier><typedef-name><ident><name>.Str;
-            #my @typedef_type = $<declaration-specifier>[1..*-2];
-            #%*TYPEDEFS{$typedef_name} = @typedef_type;
+            my $typedef_name = $<declaration-specifier>[*-1]<type-specifier><typedef-name><ident><name>.Str;
+            my @typedef_type = $<declaration-specifier>[1..*-2];
+            %*TYPEDEFS{$typedef_name} = @typedef_type;
             $*TYPEDEF_CONTEXT = False;
         }
     }
-    { say "declaration-specifiers 3"; }
+    #{ say "declaration-specifiers 3"; }
 }
 
 # Nonstandard: declaration-specifier does not exist in C89 grammar
@@ -272,29 +270,29 @@ rule declaration-specifiers {
 # so we factor it out as <declaration-specifier>+ which means the same.
 proto rule declaration-specifier {*}
 rule declaration-specifier:sym<storage-class> {
-    { say "declaration-specifier:sym<storage-class> 1"; }
+    #{ say "declaration-specifier:sym<storage-class> 1"; }
     <storage-class-specifier>
-    { say "declaration-specifier:sym<storage-class> 2"; }
+    #{ say "declaration-specifier:sym<storage-class> 2"; }
 }
 rule declaration-specifier:sym<type-specifier> {
-    { say "declaration-specifier:sym<type-specifier> 1"; }
+    #{ say "declaration-specifier:sym<type-specifier> 1"; }
     <type-specifier>
-    { say "declaration-specifier:sym<type-specifier> 2"; }
+    #{ say "declaration-specifier:sym<type-specifier> 2"; }
 }
 rule declaration-specifier:sym<type-qualifier> {
-    { say "declaration-specifier:sym<type-qualifier> 1"; }
+    #{ say "declaration-specifier:sym<type-qualifier> 1"; }
     <type-qualifier>
-    { say "declaration-specifier:sym<type-qualifier> 2"; }
+    #{ say "declaration-specifier:sym<type-qualifier> 2"; }
 }
 rule declaration-specifier:sym<function> {
-    { say "declaration-specifier:sym<function> 1"; }
+    #{ say "declaration-specifier:sym<function> 1"; }
     <function-specifier>
-    { say "declaration-specifier:sym<function> 2"; }
+    #{ say "declaration-specifier:sym<function> 2"; }
 }
 rule declaration-specifier:sym<alignment> {
-    { say "declaration-specifier:sym<alignment> 1"; }
+    #{ say "declaration-specifier:sym<alignment> 1"; }
     <alignment-specifier>
-    { say "declaration-specifier:sym<alignment> 2"; }
+    #{ say "declaration-specifier:sym<alignment> 2"; }
 }
 
 rule init-declarator-list { <init-declarator> [',' <init-declarator>]* }
@@ -323,43 +321,42 @@ rule type-specifier:sym<unsigned> { <sym> }
 rule type-specifier:sym<_Bool>    { <sym> }
 rule type-specifier:sym<_Complex> { <sym> }
 rule type-specifier:sym<atomic-type>     {
-    { say "type-specifier:sym<atomic-type> 1"; }
+    #{ say "type-specifier:sym<atomic-type> 1"; }
     <atomic-type-specifier>
-    { say "type-specifier:sym<atomic-type> 1"; }
+    #{ say "type-specifier:sym<atomic-type> 1"; }
 }
 rule type-specifier:sym<struct-or-union> {
-    { say "type-specifier:sym<struct-or-union> 1"; }
+    #{ say "type-specifier:sym<struct-or-union> 1"; }
     <struct-or-union-specifier>
-    { say "type-specifier:sym<struct-or-union> 2"; }
+    #{ say "type-specifier:sym<struct-or-union> 2"; }
 }
 # TODO
 rule type-specifier:sym<enum-specifier>  {
-    { say "type-specifier:sym<enum-specifier> 1"; }
+    #{ say "type-specifier:sym<enum-specifier> 1"; }
     <enum-specifier>
-    { say "type-specifier:sym<enum-specifier> 2"; }
+    #{ say "type-specifier:sym<enum-specifier> 2"; }
 }
 rule type-specifier:sym<typedef-name>    {
-    { say "type-specifier:sym<typedef-name> 1"; }
+    #{ say "type-specifier:sym<typedef-name> 1"; }
     <typedef-name>
-    { say "type-specifier:sym<typedef-name> 2" ~ $<typedef-name>; }
-    #<?{ ($*TYPEDEF_CONTEXT) || (%*TYPEDEFS{$<typedef-name><ident><name>.Str}:exists) }>
+    #{ say "type-specifier:sym<typedef-name> 2"; }
     <?{ ($*TYPEDEF_CONTEXT) || (%*TYPEDEFS{$<typedef-name><ident><name>.Str}:exists) }>
-    { say "type-specifier:sym<typedef-name> 3"; }
+    #{ say "type-specifier:sym<typedef-name> 3"; }
 }
 # TODO: add check for if it's been typedef'd
 
 # SS 6.7.2.1
 proto rule struct-or-union-specifier {*}
 rule struct-or-union-specifier:sym<decl> {
-    { say "struct-or-union-specifier:sym<decl> 1"; }
+    #{ say "struct-or-union-specifier:sym<decl> 1"; }
     <struct-or-union> <ident>?
     '{' <struct-declaration-list> '}'
-    { say "struct-or-union-specifier:sym<decl> 2"; }
+    #{ say "struct-or-union-specifier:sym<decl> 2"; }
 }
 rule struct-or-union-specifier:sym<spec> {
-    { say "struct-or-union-specifier:sym<spec> 1"; }
+    #{ say "struct-or-union-specifier:sym<spec> 1"; }
     <struct-or-union> <ident> <!before '{'>
-    { say "struct-or-union-specifier:sym<spec> 2"; }
+    #{ say "struct-or-union-specifier:sym<spec> 2"; }
 }
 
 proto rule struct-or-union {*}
@@ -409,15 +406,15 @@ rule struct-declarator:sym<bit-declarator> {
 # SS 6.7.2.2
 proto rule enum-specifier {*}
 rule enum-specifier:sym<decl> {
-    { say "enum-specifier:sym<decl> 1"; }
+    #{ say "enum-specifier:sym<decl> 1"; }
     <enum-keyword> <ident>?
-    { say "enum-specifier:sym<decl> 2"; }
+    #{ say "enum-specifier:sym<decl> 2"; }
     '{'
-    { say "enum-specifier:sym<decl> 3"; }
+    #{ say "enum-specifier:sym<decl> 3"; }
     <enumerator-list> ','?
-    { say "enum-specifier:sym<decl> 4"; }
+    #{ say "enum-specifier:sym<decl> 4"; }
     '}'
-    { say "enum-specifier:sym<decl> 5"; }
+    #{ say "enum-specifier:sym<decl> 5"; }
 }
 rule enum-specifier:sym<spec> {
     <enum-keyword> <ident> <!before '{'>
@@ -432,15 +429,15 @@ rule enumerator {
 # SS 6.7.2.4
 proto rule atomic-type-specifier {*} # C11
 rule atomic-type-specifier:sym<_Atomic> {
-    { say "atomic-type-specifier:sym<_Atomic> 1"; }
+    #{ say "atomic-type-specifier:sym<_Atomic> 1"; }
     <atomic-keyword>
-    { say "atomic-type-specifier:sym<_Atomic> 2"; }
+    #{ say "atomic-type-specifier:sym<_Atomic> 2"; }
     '('
-    { say "atomic-type-specifier:sym<_Atomic> 3"; }
+    #{ say "atomic-type-specifier:sym<_Atomic> 3"; }
     <type-name>
-    { say "atomic-type-specifier:sym<_Atomic> 4"; }
+    #{ say "atomic-type-specifier:sym<_Atomic> 4"; }
     ')'
-    { say "atomic-type-specifier:sym<_Atomic> 5"; }
+    #{ say "atomic-type-specifier:sym<_Atomic> 5"; }
 }
 
 # SS 6.7.3
@@ -458,18 +455,18 @@ rule function-specifier:sym<_Noreturn> { <sym> }
 # SS 6.7.5
 proto rule alignment-specifier {*}
 rule alignment-specifier:sym<type-name> {
-    { say "alignment-specifier:sym<type-name> 1"; }
+    #{ say "alignment-specifier:sym<type-name> 1"; }
     <alignas-keyword>
-    { say "alignment-specifier:sym<type-name> 2"; }
+    #{ say "alignment-specifier:sym<type-name> 2"; }
     '(' <type-name> ')'
-    { say "alignment-specifier:sym<type-name> 3"; }
+    #{ say "alignment-specifier:sym<type-name> 3"; }
 }
 rule alignment-specifier:sym<constant> {
-    { say "alignment-specifier:sym<constant> 1"; }
+    #{ say "alignment-specifier:sym<constant> 1"; }
     <alignas-keyword>
-    { say "alignment-specifier:sym<constant> 2"; }
+    #{ say "alignment-specifier:sym<constant> 2"; }
     '(' <constant-expression> ')'
-    { say "alignment-specifier:sym<constant> 3"; }
+    #{ say "alignment-specifier:sym<constant> 3"; }
 }
 
 # SS 6.7.6
@@ -756,7 +753,11 @@ rule jump-statement:sym<return> {
 rule translation-unit {
     :my $*STATIC_CONTEXT = False;
     :my $*TYPEDEF_CONTEXT = False;
+    :my $*EXTERN_CONTEXT = False;
     :my %*TYPEDEFS;
+    :my %*STRUCTS;
+    :my %*ENUMS;
+    
     <external-declaration>+
 }
 

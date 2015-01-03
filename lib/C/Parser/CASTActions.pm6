@@ -11,36 +11,59 @@ method ident($/) {
     make Identifier.new(:$name);
 }
 
-#method integer-constant($/) {
-#    $value = 2;
-#    make IntegerConstant.new(:$value);
-#}
-#method floating-constant($/) {
-#    $value = 1.0;
-#    make FloatingConstant.new(:$value);
-#}
-#method enumeration-constant($/) {
-#    $value = 'True';
-#    make EnumConstant.new(:$value);
-#}
-#method character-constant($/) {
-#    $value = 'c';
-#    make CharConstant.new(:$value);
-#}
+method integer-constant($/) {
+    my $tag = ConstantTag::integer;
+    my $value = 2;
+    make Constant.new(:$tag, :$value);
+}
+method floating-constant($/) {
+    my $tag = ConstantTag::floating;
+    my $value = 1.0;
+    make Constant.new(:$tag, :$value);
+}
+method enumeration-constant($/) {
+    my $tag = ConstantTag::enum;
+    my $value = 'True';
+    make Constant.new(:$tag, :$value);
+}
+method character-constant($/) {
+    my $tag = ConstantTag::character;
+    my $value = 'c';
+    make Constant.new(:$tag, :$value);
+}
+
+# SS 6.4.3
+
+method constant:sym<integer>($/) {
+    make $<integer-constant>.ast;
+}
+method constant:sym<floating>($/) {
+    make $<floating-constant>.ast;
+}
+method constant:sym<enumeration>($/) {
+    make $<enumeration-constant>.ast;
+}
+method constant:sym<character>($/) {
+    make $<character-constant>.ast;
+}
 
 method primary-expression:sym<identifier>($/) {
+    say "Ident: " ~ $<ident>.perl;
     make $<ident>.ast;
 }
 
 method primary-expression:sym<constant>($/) { 
+    say "Constant: " ~ $<constant>.perl;
     make $<constant>.ast;
 }
 
 method primary-expression:sym<string-literal>($/) { 
+    say "StringConstant: " ~ $<string-literal>.perl;
     make $<string-literal>.ast;
 }
 
 method primary-expression:sym<expression>($/) {
+    say "Parens: " ~ $<expression>.perl;
     make $<expression>.ast;
 }
 
@@ -81,74 +104,242 @@ method postfix-expression-first:sym<primary>($/) {
 }
 
 method postfix-expression-first:sym<initializer>($/) {
-    make ""
-#Initializer.new(
-#        expr => 
-#        );
-#    '(' <type-name> ')'
-#    '{' (<initializer-list> ','?) '}' 
+    my $tag = ExpressionTag::initializer;
+    my $args = map {$_.ast}, @<operands>;
+    $args.unshift($<operator>);
+    make OpExpression.new(:$tag, :$args);
 }
 
 method postfix-expression-rest:sym<[ ]>($/) {
-    make $<expression>.ast;
+    make OpExpression.new(
+        tag => ExpressionTag::index,
+        args => [$<operand>.ast]
+    );
 }
 method postfix-expression-rest:sym<( )>($/) {
-    make $<argument-expression-list>.ast;
-}
-
-method postfix-expression-rest:sym<.>($/)   {
-    make ""
-}
-method postfix-expression-rest:sym«->»($/)  {
-    make ""
-}
-method postfix-expression-rest:sym<++>($/)  {
-    make ""
-}
-method postfix-expression-rest:sym<-->($/)  {
-    make ""
-}
-
-# unary
-# cast-expr
-
-
-# SS 6.5.5
-method multiplicative-expression($/) {
-    make CAST::Op.new(
-        :op($<multiplicative-operator>.ast),
-        @<cast-expression>.ast
+    make OpExpression.new(
+        tag => ExpressionTag::call,
+        args => @<operands>
     );
 }
 
-## SS 6.5.6
-#rule additive-expression {
-#    <multiplicative-expression>
-#    (<additive-operator> <multiplicative-expression>)*
+method postfix-expression-rest:sym<.>($/)   {
+    make OpExpression.new(
+        tag => ExpressionTag::direct_selector,
+        args => $<ident>.ast
+    );
+}
+method postfix-expression-rest:sym«->»($/)  {
+    make OpExpression.new(
+        tag => ExpressionTag::indirect_selector,
+        args => $<ident>.ast
+    );
+}
+method postfix-expression-rest:sym<++>($/)  {
+    make ExpressionTag::post_increment;
+}
+method postfix-expression-rest:sym<-->($/)  {
+    make ExpressionTag::post_decrement;
+}
+
+# unary
+
+method unary-expression:sym<postfix>($/) {
+    make $<postfix-expression>.ast;
+}
+
+method unary-expression:sym<++>($/) {
+    make OpExpression.new(
+        tag => ExpressionTag::pre_increment,
+        args => [$<operand>.ast]
+    );
+}
+
+method unary-expression:sym<-->($/) {
+    make OpExpression.new(
+        tag => ExpressionTag::pre_increment,
+        args => [$<operand>.ast]
+    );
+}
+method unary-expression:sym<unary-cast>($/) {
+    make OpExpression.new(
+        tag => $<operator>.ast,
+        args => [$<operand>.ast]
+    );
+}
+
+#method unary-expression:sym<size-of-expr>($/) {
+#    <sizeof-keyword> <unary-expression>
 #}
-#proto rule additive-operator {*}
-#rule additive-operator:sym<+> { <sym> }
-#rule additive-operator:sym<-> { <sym> }
-#
-## SS 6.5.7
-#rule shift-expression {
-#    <additive-expression>
-#    (<shift-operator> <additive-expression>)*
+#method unary-expression:sym<size-of-type>($/) {
+#    <sizeof-keyword> '(' <type-name> ')'
 #}
-#proto rule shift-operator {*}
-#rule shift-operator:sym«<<» { <sym> }
-#rule shift-operator:sym«>>» { <sym> }
-#
-## SS 6.5.8
-#rule relational-expression {
-#    <shift-expression>
-#    (<relational-operator> <shift-expression>)*
+#method unary-expression:sym<align-of-type>($/) {
+#    <alignof-keyword> '(' <type-name> ')'
 #}
-#proto rule relational-operator {*}
-#rule relational-operator:sym«<»  { <sym> }
-#rule relational-operator:sym«>»  { <sym> }
-#rule relational-operator:sym«<=» { <sym> }
-#rule relational-operator:sym«>=» { <sym> }
+
+method unary-operator:sym<&> {
+    make ExpressionTag::pre_reference;
+}
+method unary-operator:sym<*> {
+    make ExpressionTag::pre_dereference;
+}
+method unary-operator:sym<+> {
+    make ExpressionTag::pre_positive;
+}
+method unary-operator:sym<-> {
+    make ExpressionTag::pre_negative;
+}
+method unary-operator:sym<~> {
+    make ExpressionTag::bitnot;
+}
+method unary-operator:sym<!> {
+    make ExpressionTag::not;
+}
+
+
+# SS 6.5.4
+method cast-expression($/) {
+    my Expression $ast = $<operand>.ast;
+    for @<operators> -> $operator {
+        my $tag = C::Parser::CAST::expr_tag_from_str($operator<sym>.Str);
+        $ast = OpExpression.new(
+            tag => $tag,
+            args => [$ast])
+    }
+    make $ast;
+}
+
+sub binop_from_lassoc(@operators, @operands) {
+    my Expression $ast = (shift @operands).ast;
+    for @operators Z @operands -> $operator, $operand {        
+        if $operator.WHAT.perl ne 'Match' {
+            die "expected operator to be of type `Match`";
+        }
+        my $tag = C::Parser::CAST::expr_tag_from_str($operator<sym>.Str);
+        $ast = OpExpression.new(
+            tag => $tag,
+            args => [$ast, $operand]
+        );
+    };
+    return $ast;
+}
+
+sub binop_from_rassoc(@operators, @operands) {
+    # TODO
+    return binop_from_lassoc(@operators, @operands);
+}
+
+# SS 6.5.5
+method multiplicative-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method multiplicative-operator:sym<*>($/) {
+    make ExpressionTag::times;
+}
+method multiplicative-operator:sym</>($/) {
+    make ExpressionTag::divide;
+}
+method multiplicative-operator:sym<%>($/) {
+    make ExpressionTag::remainder;
+}
+
+# SS 6.5.6
+method additive-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method additive-operator:sym<+>($/) { 
+    make ExpressionTag::plus;
+}
+method additive-operator:sym<->($/) { make 
+    make ExpressionTag::minus;
+}
+
+# SS 6.5.7
+method shift-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method shift-operator:sym«<<»($/) {
+    make ExpressionTag::left_shift;
+}
+method shift-operator:sym«>>»($/) {
+    make ExpressionTag::right_shift;
+}
+
+# SS 6.5.8
+method relational-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method relational-operator:sym«<»($/) {
+    make ExpressionTag::lt;
+}
+method relational-operator:sym«>»($/) {
+    make ExpressionTag::gt;
+}
+method relational-operator:sym«<=»($/) {
+    make ExpressionTag::leq;
+}
+method relational-operator:sym«>=»($/) {
+    make ExpressionTag::geq;
+}
+
+# SS 6.5.9
+method equality-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method equality-operator:sym<==>($/) {
+    make ExpressionTag::geq;
+}
+method equality-operator:sym<!=>($/) {
+    make ExpressionTag::geq;
+}
+
+# SS 6.5.10
+method and-expression($/)  {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method and-operator:sym<&>($/) {
+    make ExpressionTag::bitand;
+}
+
+# SS 6.5.11
+method exclusive-or-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method exclusive-or-operator:sym<^>($/) {
+    make ExpressionTag::bitxor;
+}
+
+# SS 6.5.12
+method inclusive-or-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method inclusive-or-operator:sym<|>($/) {
+    make ExpressionTag::bitor;
+}
+
+# SS 6.5.13
+method logical-and-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method logical-and-operator:sym<&&>($/) {
+    make ExpressionTag::and;
+}
+
+# SS 6.5.14
+method logical-or-expression($/) {
+    make binop_from_lassoc(@<operators>, @<operands>);
+}
+method logical-or-operator:sym<||>($/) {
+    make ExpressionTag::or;
+}
+
+# SS 6.5.15
+#method conditional-expression {
+#    make binop_from_lassoc(@<operators>, @<operands>);
+#    <logical-or-expression>
+#    ['?' <expression> ':' <conditional-expression>]?
+#}
 
 
 

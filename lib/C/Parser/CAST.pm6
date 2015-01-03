@@ -1,93 +1,97 @@
 use v6;
 module C::Parser::CAST is export;
 
-#our %CDMap = {
-#    'post++' => 'prog2:post_increment',
-#    'post--' => 'prog2:post_decrement',
-#    'pre++' => 'prog2:increment',
-#    'pre--' => 'prog2:decrement',
-#    'pre&' => 'ref1:referenceof',
-#    'pre*' => 'ref1:dereference',
-#    'pre+' => 'arith2:unary_plus',
-#    'pre-' => 'arith1:unary_minus',
-#    '~'   => 'bitwise1:not',
-#    '!'   => 'logic1:not',
-#    '? :' => 'prog2:if_exp',
-#    '*'   => 'arith1:times',
-#    '/'   => 'arith1:divide',
-#    '%'   => 'integer1:remainder',
-#    '+'   => 'arith1:plus',
-#    '-'   => 'arith1:minus',
-#    '<<'  => 'bitwise3:left_shift',
-#    '>>'  => 'bitwise3:right_shift',
-#    '<'   => 'relation1:lt',
-#    '>'   => 'relation1:gt',
-#    '<='  => 'relation1:leq',
-#    '>='  => 'relation1:geq',
-#    '=='  => 'relation1:eq',
-#    '!='  => 'relation1:neq',
-#    '&'   => 'bitwise1:and',
-#    '^'   => 'bitwise1:xor',
-#    '|'   => 'bitwise1:or',
-#    '&&'  => 'logic1:and',
-#    '||'  => 'logic1:or',
-#    '*='  => 'prog2:assignment_operator',
-#    '/='  => 'prog2:assignment_operator',
-#    '%='  => 'prog2:assignment_operator',
-#    '+='  => 'prog2:assignment_operator',
-#    '-='  => 'prog2:assignment_operator',
-#    '<<=' => 'prog2:assignment_operator',
-#    '>>=' => 'prog2:assignment_operator',
-#    '&='  => 'prog2:assignment_operator',
-#    '^='  => 'prog2:assignment_operator',
-#    '|='  => 'prog2:assignment_operator',
-#    '='   => 'prog1:assignment'
-#};
-
-enum ExpressionTag <
-    ET_post++
-    ET_post--
-    ET_pre++
-    ET_pre--
-    ET_pre&
-    ET_pre*
-    ET_pre+
-    ET_pre-
-    ET_bitnot
-    ET_not
-    ET_if_exp
-    ET_times
-    ET_divide
-    ET_remainder
-    ET_plus
-    ET_minus
-    ET_left_shift
-    ET_right_shift
-    ET_lt
-    ET_gt
-    ET_leq
-    ET_geq
-    ET_eq
-    ET_neq
-    ET_bitand
-    ET_bitxor
-    ET_bitor
-    ET_and
-    ET_or
-    ET_=
-    ET_times=
-    ET_divide=
-    ET_remainder=
-    ET_plus=
-    ET_minus=
-    ET_left_shift=
-    ET_right_shift=
-    ET_bitand=
-    ET_bitxor=
-    ET_bitor=
+enum ExpressionTag is export <
+    post_increment
+    post_decrement
+    pre_increment
+    pre_decrement
+    pre_reference
+    pre_dereference
+    pre_positive
+    pre_negative
+    bitand
+    bitnot
+    bitor
+    bitxor
+    divide
+    and
+    eq
+    geq
+    gt
+    if_exp
+    left_shift
+    leq
+    lt
+    minus
+    neq
+    not
+    or
+    plus
+    remainder
+    right_shift
+    times
+    assign
+    assign_times
+    assign_divide
+    assign_remainder
+    assign_plus
+    assign_minus
+    assign_left_shift
+    assign_right_shift
+    assign_bitand
+    assign_bitxor
+    assign_bitor
 >;
 
-enum JumpTag <
+our %CDMap = %(
+    'post++' => ExpressionTag::post_increment,
+    'post--' => ExpressionTag::post_decrement,
+    'pre++' => ExpressionTag::pre_increment,
+    'pre--' => ExpressionTag::pre_decrement,
+    'pre&' => ExpressionTag::pre_reference,
+    'pre*' => ExpressionTag::pre_dereference,
+    'pre+' => ExpressionTag::pre_positive,
+    'pre-' => ExpressionTag::pre_negative,
+    '~'   => ExpressionTag::bitnot,
+    '!'   => ExpressionTag::not, 
+    '? :' => ExpressionTag::if_exp,
+    '*'   => ExpressionTag::times,
+    '/'   => ExpressionTag::divide,
+    '%'   => ExpressionTag::remainder,
+    '+'   => ExpressionTag::plus,
+    '-'   => ExpressionTag::minus,
+    '<<'  => ExpressionTag::left_shift,
+    '>>'  => ExpressionTag::right_shift,
+    '<'   => ExpressionTag::lt,
+    '>'   => ExpressionTag::gt,
+    '<='  => ExpressionTag::leq,
+    '>='  => ExpressionTag::geq,
+    '=='  => ExpressionTag::eq,
+    '!='  => ExpressionTag::neq,
+    '&'   => ExpressionTag::bitand,
+    '^'   => ExpressionTag::bitxor,
+    '|'   => ExpressionTag::bitor,
+    '&&'  => ExpressionTag::and, 
+    '||'  => ExpressionTag::or, 
+    '*='  => ExpressionTag::assign_times,
+    '/='  => ExpressionTag::assign_divide,
+    '%='  => ExpressionTag::assign_remainder,
+    '+='  => ExpressionTag::assign_plus,
+    '-='  => ExpressionTag::assign_minus,
+    '<<=' => ExpressionTag::assign_left_shift,
+    '>>=' => ExpressionTag::assign_right_shift,
+    '&='  => ExpressionTag::assign_bitand,
+    '^='  => ExpressionTag::assign_bitxor,
+    '|='  => ExpressionTag::assign_bitor,
+    '='   => ExpressionTag::assign, 
+);
+
+our sub expr_tag_from_str(Str $op --> ExpressionTag) {
+    return %CDMap{$op};
+}
+
+enum JumpTag is export <
     JT_break
     JT_continue
     JT_goto
@@ -95,19 +99,22 @@ enum JumpTag <
     JT_return
 >;
 
-enum ConstantTag <
-    CT_integer
-    CT_real
-    CT_enum
-    CT_character
+enum ConstantTag is export <
+    integer
+    real
+    enum
+    character
+    match
 >;
 
-enum StructureTag <
+enum StructureTag is export <
     ST_struct
-    ST_union 
+    ST_union
+    ST_enum
+    ST_nil
 >;
 
-enum StorageSpecifierTag <
+enum StorageSpecifierTag is export <
     SS_auto
     SS_register
     SS_static
@@ -116,7 +123,7 @@ enum StorageSpecifierTag <
     SS_thread_local
 >;
 
-enum TypeSpecifierTag < 
+enum TypeSpecifierTag is export < 
     TS_void
     TS_char
     TS_short
@@ -135,13 +142,15 @@ enum TypeSpecifierTag <
     TS_typeof_expr    
 >;
 
-enum TypeQualifierTag <
+enum TypeQualifierTag is export <
     TQ_const
     TQ_volatile 
     TQ_restrict 
     TQ_inline 
     TQ_attribute 
 >;
+
+
 
 # forward declarations
 
@@ -167,6 +176,16 @@ class TypeQualifier is DeclarationSpecifier is export {
     has TypeQualifierTag $.tag;
 }
 
+class OpExpression is export {
+    has ExpressionTag $.tag;
+    has Expression @.args;
+}
+
+#class CallExpression is export {
+#    has Expression $first;
+#    has Expression @.args;
+#}
+
 class PrimaryExpression is Expression is export {}
 
 class Identifier is PrimaryExpression is export {
@@ -176,7 +195,7 @@ class Identifier is PrimaryExpression is export {
 class Constant is PrimaryExpression is export {
     has ConstantTag $.type;
     has Identifier $.ident;
-    has Num $.value; # WTF
+    has Any $.value; # WTF
 }
 
 class StringLiteral is PrimaryExpression is export {

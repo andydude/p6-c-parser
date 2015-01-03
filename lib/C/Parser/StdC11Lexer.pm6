@@ -161,10 +161,19 @@ token universal-character-name:sym<u> { '\\u' <xdigit> ** 4 }
 token universal-character-name:sym<U> { '\\U' <xdigit> ** 8 }
 
 proto token constant {*}
-token constant:sym<integer> { <integer-constant> }
-token constant:sym<floating> { <floating-constant> }
-token constant:sym<enumeration> { <enumeration-constant> }
-token constant:sym<character> { <character-constant> }
+token constant:sym<integer> {
+    <integer-constant>
+    <!before [.eE]>
+}
+token constant:sym<floating> {
+    <floating-constant>
+}
+token constant:sym<enumeration> {
+    <enumeration-constant>
+}
+token constant:sym<character> {
+    <character-constant>
+}
 
 # SS 6.4.4.1
 token integer-constant { <integer-value> <integer-suffix>* }
