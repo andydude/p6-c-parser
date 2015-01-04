@@ -32,7 +32,7 @@ sub MAIN (Str $input = "-",
             $ast = $parser.parse($source, :$actions);
         }
         default {
-            die "unknown $actions, must be one of: nil, cast."
+            die "unknown \$actions, must be one of: nil, cast."
         }
     }
 
@@ -51,7 +51,7 @@ sub MAIN (Str $input = "-",
         }
         default {
             say $ast;
-            die "unknown $oformat, must be one of: nil, str, perl."
+            die "unknown \$oformat, must be one of: nil, str, perl."
         }
     }
     
