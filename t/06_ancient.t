@@ -5,12 +5,17 @@ plan 1;
 use C::Parser::StdC11Parser;
 
 our $source = q<<<
-    int main() {
+    int printf(const char *, ...);
+    
+    int main(argc, argv)
+        int argc; char * argv[];
+    {
+        printf("Hello %s!", argv[1]);
         return 0;
     }
 >>>;
 
 {
     my $match = C::Parser::StdC11Parser.parse($source);
-    is($match.WHAT.perl, 'Match', 'gives a Match');
+    isa_ok($match, Match, 'gives a Match');
 }

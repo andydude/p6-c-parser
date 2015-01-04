@@ -52,7 +52,7 @@ method string-literal:sym<quote>($/) { make $<s-char-sequence>.ast }
 #method string-literal:sym<u>($/)  { make $<s-char-sequence>.ast }
 #method string-literal:sym<U>($/)  { make $<s-char-sequence>.ast }
 
-method s-char-sequence {
+method s-char-sequence($/) {
     my $tag = ConstantTag::string;
     my $value = $<s-char>.Str;
     make Constant.new(:$tag, :$value);
@@ -126,6 +126,10 @@ method generic-association:sym<default>($/) {
 }
 
 method postfix-expression($/) {
+    my $ast = $<postfix-expression-first>.ast;
+
+    #for @<postfix-expression-rest>
+    #make ;
     make $<postfix-expression-first>.ast;
 }
 
@@ -464,10 +468,9 @@ method init-declarator-list($/) {
 method init-declarator($/) {
     #say $<declarator>.ast.perl;
     #say $<initializer>.ast.perl;
-    make InitDeclarator.new(
-        decl => $<declarator>.ast,
-        init => $<initializer>.ast
-    );
+    my $decl = $<declarator> ?? $<declarator>.ast !! Declarator.new();
+    my $init = $<initializer> ?? $<initializer>.ast !! Initializer.new();
+    make InitDeclarator.new(:$decl, :$init);
 }
 
 # SS 6.7.1
@@ -562,36 +565,37 @@ method direct-declarator-first:sym<declarator>($/) {
     make $<declarator>.ast;
 }
 
-#method direct-declarator-rest:sym<b-assignment-expression> {
+#method direct-declarator-rest:sym<b-assignment-expression>($/) {
 #    '['
 #    <type-qualifier-list>?
 #    <assignment-expression>?
 #    ']'
 #}
-#method direct-declarator-rest:sym<b-static-type-qualifier> {
+#method direct-declarator-rest:sym<b-static-type-qualifier>($/) {
 #    '['
 #    <static-keyword>
 #    <type-qualifier-list>?
 #    <assignment-expression>
 #    ']'
 #}
-#method direct-declarator-rest:sym<b-type-qualifier-static> {
+#method direct-declarator-rest:sym<b-type-qualifier-static>($/) {
 #    '['
 #    <type-qualifier-list>
 #    <static-keyword>
 #    <assignment-expression>
 #    ']'
 #}
-#method direct-declarator-rest:sym<b-type-qualifier-list> {
-#    <type-qualifier-list>? '*'
-#}
 
-method direct-declarator-rest:sym<p-parameter-type-list> {
+method direct-declarator-rest:sym<b-type-qualifier-list>($/) {
+    make $<type-qualifier-list>.ast;
+}
+
+method direct-declarator-rest:sym<p-parameter-type-list>($/) {
     make $<parameter-type-list>.ast;
 }
 
-method direct-declarator-rest:sym<p-identifier-list> {
-    make $<identifier-list>.ast;
+method direct-declarator-rest:sym<p-identifier-list>($/) {
+    make $<identifier-list>;
 }
 
 method pointer:sym<pointer>($/) {
@@ -600,21 +604,78 @@ method pointer:sym<pointer>($/) {
 }
 
 method type-qualifier-list($/) { make map {$_.ast}, @<type-qualifier> }
-method parameter-type-list:sym<end>($/) { make $<parameter-list>.ast }
 method parameter-type-list:sym<...>($/) { make $<parameter-list>.ast }
+method parameter-type-list:sym<end>($/) { make $<parameter-list>.ast }
 
 method parameter-list($/) {
     make map {$_.ast}, @<parameter-declaration>;
 }
 
-#method parameter-declaration:sym<declarator>($/) {
-#    <declaration-specifiers> <declarator>
-#}
-#method parameter-declaration:sym<abstract>($/) {
-#    <declaration-specifiers> <abstract-declarator>?
-#}
+method parameter-declaration:sym<declarator>($/) {
+    make ParameterDeclaration.new(
+        decls => map {$_.ast}, @<declaration-specifiers>,
+        decr => $<declarator>.ast
+    )
+}
+method parameter-declaration:sym<abstract>($/) {
+    make ParameterDeclaration.new(
+        decls => map {$_.ast}, @<declaration-specifiers>
+#        decr => $<abstract-declarator>.ast
+    )
+}
 
 method identifier-list($/) { make map {$_.ast}, @<ident> }
+
+# SS 6.7.7
+method type-name($/) {
+    make TypeName.new(
+        specs => @<specifier-qualifier-list>,
+        decr => $<abstract-declarator>);
+}
+method abstract-declarator:sym<pointer>($/)  {
+    make $<pointer>.ast;
+}
+method abstract-declarator:sym<direct-abstract>($/) {
+    # TODO
+    make $<direct-abstract-declarator>.ast;
+}
+
+method direct-abstract-declarator($/) {
+    make AbstractDeclarator.new(
+        first => $<direct-abstract-declarator-first>,
+            rest => @<direct-abstract-declarator-rest>)
+}
+method direct-abstract-declarator-first:sym<abstract>($/)  {
+    make $<abstract-declarator>.ast;
+}
+
+#rule direct-abstract-declarator-rest:sym<b-type-qualifier>($/) {
+#    '['
+#    <type-qualifier-list>?
+#    <assignment-expression>?
+#    ']'
+#}
+#rule direct-abstract-declarator-rest:sym<b-static-type-qualifier>($/) {
+#    '['
+#    <static-keyword>
+#    <type-qualifier-list>?
+#    <assignment-expression>
+#    ']'
+#}
+#rule direct-abstract-declarator-rest:sym<b-type-qualifier-static>($/) {
+#    '['
+#    <type-qualifier-list>
+#    <static-keyword>
+#    <assignment-expression>
+#    ']'
+#}
+#rule direct-abstract-declarator-rest:sym<b-*>($/) {
+#    '[' '*' ']'
+#}
+
+method direct-abstract-declarator-rest:sym<p-parameter-type-list>($/) {
+    make $<parameter-type-list>.ast;
+}
 
 # SS 6.7.8
 method typedef-name($/) { make $<ident>.ast }
@@ -699,20 +760,20 @@ method labeled-statement:sym<default>($/) {
 }
 
 # SS 6.8.2
-#method compound-statement($/) {
-#    '{'
-#    <block-item-list>?
-#    '}'
-#}
-#method block-item-list($/) {
-#    <block-item>+
-#}
-#method block-item:sym<declaration>($/) {
-#    <declaration>
-#}
-#method block-item:sym<statement>($/) {
-#    <statement>
-#}
+method compound-statement($/) {
+    make $<block-item-list>.ast;
+}
+method block-item-list($/) {
+    my @items = map {$_.ast}, @<block-item>;
+    say @items.perl;
+    make BlockStatement.new(:@items);
+}
+method block-item:sym<declaration>($/) {
+    make $<declaration>.ast;
+}
+method block-item:sym<statement>($/) {
+    make $<statement>.ast;
+}
 
 # SS 6.8.3
 method expression-statement($/) {
@@ -738,18 +799,24 @@ method selection-statement:sym<switch>($/) {
 # SS 6.8.5
 
 # SS 6.8.6
-#method jump-statement:sym<goto>($/) {
-#    <goto-keyword> <ident> ';'
-#}
-#method jump-statement:sym<continue>($/) {
-#    <continue-keyword> ';'
-#}
-#method jump-statement:sym<break>($/) {
-#    <break-keyword> ';'
-#}
-#method jump-statement:sym<return>($/) {
-#    <return-keyword> <expression>? ';'
-#}
+method jump-statement:sym<goto>($/) {
+    make JumpStatement.new(
+        tag => JumpTag::goto,
+            label => $<ident>.ast)
+}
+method jump-statement:sym<continue>($/) {
+    make JumpStatement.new(
+        tag => JumpTag::continue)
+}
+method jump-statement:sym<break>($/) {
+    make JumpStatement.new(
+        tag => JumpTag::break)
+}
+method jump-statement:sym<return>($/) {
+    make JumpStatement.new(
+        tag => JumpTag::return,
+            expr => $<expression>.ast)
+}
 
 # SS 6.9
 method translation-unit($/) {
@@ -767,12 +834,10 @@ method external-declaration:sym<declaration>($/) {
 # SS 6.9.1
 method function-definition:sym<modern>($/) {
     my @modifiers = map {$_.ast}, @<declaration-specifiers>;
-    my @ancients = [];
     my $head = $<declarator>.ast;
     my $body = $<compound-statement>.ast;
     make FunctionDeclaration.new(
-        :@modifiers, :$head,
-        :@ancients, :$body);
+        :@modifiers, :$head, :$body);
 }
 
 method function-definition:sym<ancient>($/) {

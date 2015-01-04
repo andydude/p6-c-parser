@@ -47,6 +47,7 @@ enum ExpressionTag is export <
     alignof_type
     alignas_type
     alignas_expr
+    call
 >;
 
 our %CDMap = %(
@@ -97,11 +98,11 @@ our sub expr_tag_from_str(Str $op --> ExpressionTag) {
 }
 
 enum JumpTag is export <
-    JT_break
-    JT_continue
-    JT_goto
-    JT_goto_s
-    JT_return
+    break
+    continue
+    goto
+    goto_s
+    return
 >;
 
 enum ConstantTag is export <
@@ -109,6 +110,7 @@ enum ConstantTag is export <
     real
     enum
     character
+    string
     match
 >;
 
@@ -162,11 +164,13 @@ enum FunctionSpecifierTag is export <
 
 # forward declarations
 
+class Compound is export {}
+
 class Declaration is export {...}
 
-class Statement is export {}
+class Statement is Compound is export {}
 
-class Expression is export {}
+class Expression is Statement is export {}
 
 # declaration specifiers
 
@@ -260,6 +264,11 @@ class DesignationInitializer is InitializerMember is export {
     has Initializer $.init;
 }
 
+class TypeName is export {
+    has Any @.specs;
+    has Any $.decr;
+}
+
 class InitDeclarator is export {
     has Declarator $.decl;
     has Initializer $.init;
@@ -275,6 +284,11 @@ class PointerDeclarator is Declarator is export {
     has DirectDeclarator $.direct;
 }
 
+class AbstractDeclarator is Declarator is export {
+    has Any $.first;
+    has Any @.rest;
+}
+
 class ArrayDeclarator is Declarator is export {
     has TypeQualifier @.quals;
     has Expression $.size;
@@ -284,7 +298,11 @@ class FunctionDeclarator is Declarator is export {
     has Identifier $.ident;
     has Declaration @.decls;
     has Attribute @.attrs;
-    has Bool $.ancient;
+}
+
+class ParameterDeclaration is export {
+    has DeclarationSpecifier @.decls;
+    has Declarator $.decr;
 }
 
 class LabeledStatement is Statement is export {
@@ -318,17 +336,8 @@ class DefaultStatement is Statement is export {
     has Statement $.stmt;
 }
 
-class BlockItem is export {
-    has Declaration $.decl;
-    has Statement $.stmt;
-}
-
 class BlockStatement is Statement is export {
-    has BlockItem @.items;
-}
-
-class ExpressionStatement is Statement is export {
-    has Expression $.expr;
+    has Compound @.items;
 }
 
 class WhileStatement is Statement is export {
@@ -373,7 +382,7 @@ class AssemblyStatement is Statement is export {
 
 class ExternalDeclaration is export {}
 
-class Declaration is ExternalDeclaration is export {
+class Declaration is ExternalDeclaration is Compound is export {
     has DeclarationSpecifier @.modifiers;
     has InitDeclarator @.inits;
 }

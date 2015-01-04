@@ -21,6 +21,9 @@ rule primary-expression:sym<string-literal> {
 rule primary-expression:sym<expression> {
     '(' <expression> ')'
 }
+rule primary-expression:sym<compound-statement> { # GNU
+    '(' <compound-statement> ')'
+}
 rule primary-expression:sym<generic-selection> { # C11
     <generic-selection>
 }
@@ -53,7 +56,9 @@ rule postfix-expression {
 }
 
 proto rule postfix-expression-first {*}
-rule postfix-expression-first:sym<primary> { <primary-expression> }
+rule postfix-expression-first:sym<primary> {
+    <primary-expression>
+}
 rule postfix-expression-first:sym<initializer> {
     '('
     <type-name>
@@ -345,6 +350,12 @@ rule type-specifier:sym<typedef-name>    {
     #{ say "type-specifier:sym<typedef-name> 3"; }
 }
 # TODO: add check for if it's been typedef'd
+rule type-specifier:sym<__typeof__> { # GNU
+    <sym>
+    '('
+    <expression>
+    ')'
+}
 
 # SS 6.7.2.1
 proto rule struct-or-union-specifier {*}
@@ -535,6 +546,21 @@ rule direct-declarator-rest:sym<p-identifier-list> {
     ')'
     #{ say "direct-declarator-rest:sym<p-identifier-list> 2"; }
 }
+rule direct-declarator-rest:sym<__attribute__> { # GNU
+    <sym>
+    '(('
+    <attribute-specifier-list>
+    '))'
+}
+
+rule attribute-specifier-list { # GNU
+    <attribute-specifier> [',' <attribute-specifier>]*
+}
+
+rule attribute-specifier { # GNU
+    <ident> ['(' <primary-expression> ')']?
+}
+
 
 proto rule pointer {*}
 rule pointer:sym<pointer> { '*' <type-qualifier-list>? }
@@ -542,8 +568,8 @@ rule pointer:sym<pointer> { '*' <type-qualifier-list>? }
 rule type-qualifier-list { <type-qualifier>+ }
 
 proto rule parameter-type-list {*}
-rule parameter-type-list:sym<end> { <parameter-list> }
 rule parameter-type-list:sym<...> { <parameter-list> ',' '...' }
+rule parameter-type-list:sym<end> { <parameter-list> }
 
 rule parameter-list {
     <parameter-declaration> [',' <parameter-declaration>]*
@@ -676,7 +702,9 @@ rule block-item-list { <block-item>+ }
 proto rule block-item {*}
 rule block-item:sym<declaration> { <declaration> }
 rule block-item:sym<statement> { <statement> }
+rule block-item:sym<function-definition> { <function-definition> } # GNU
 
+    
 # SS 6.8.3
 rule expression-statement { <expression>? ';' }
 
@@ -830,3 +858,9 @@ rule declaration-list { <declaration>+ }
 #token new-line { <?> }
 #
 #proto rule replacement-list {*}
+
+# SS 6.10.9 Pragma operator
+
+rule pragma-operator {
+    '_Pragma' '(' <string-literal> ')'
+}
