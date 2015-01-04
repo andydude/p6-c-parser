@@ -10,8 +10,9 @@ sub MAIN (Str $input = "-",
 #    Str :$inlang = "c11",
     Str :$oformat = "nil",
     Str :$actions = "nil",
+#    Bool :$preproc = False,
     Bool :$lexonly = False,
-    Bool :$preproc = False)
+    Bool :$verbose = False)
 {
     my Str $source = ($input eq "-") ?? slurp("/dev/stdin") !! slurp($input);
     my $parser = $lexonly ?? C::Parser::StdC11Lexer !! C::Parser::StdC11Parser;
@@ -21,7 +22,8 @@ sub MAIN (Str $input = "-",
     #    # preprocess
     #}
 
-    say $source;
+    say "--- Input" if $verbose;
+    say $source if $verbose;
     
     given $actions {
         when "nil" {
@@ -36,17 +38,26 @@ sub MAIN (Str $input = "-",
         }
     }
 
+    if $ast.WHAT.perl eq 'Any' {
+        say "--- Error" if $verbose;
+        die "parse failed";
+    }
+    
     given $oformat {
         when "nil" {
+            say "--- Output" if $verbose;
             say $ast;
         }
         when "ast" {
+            say "--- Output" if $verbose;
             say $ast.ast;
         }
         when "str" {
+            say "--- Output" if $verbose;
             say $ast.Str;
         }
         when "perl" {
+            say "--- Output" if $verbose;
             say $ast.perl;
         }
         default {

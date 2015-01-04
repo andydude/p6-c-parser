@@ -792,38 +792,38 @@ rule translation-unit {
 
 proto rule external-declaration {*}
 rule external-declaration:sym<function-definition> {
-    { say "external-declaration:sym<function-definition> 1"; }
+    #{ say "external-declaration:sym<function-definition> 1"; }
     <function-definition>
-    { say "external-declaration:sym<function-definition> 2"; }
+    #{ say "external-declaration:sym<function-definition> 2"; }
 }
 rule external-declaration:sym<declaration> {
-    { say "external-declaration:sym<declaration> 1"; }
+    #{ say "external-declaration:sym<declaration> 1"; }
     <declaration>
-    { say "external-declaration:sym<declaration> 2"; }
+    #{ say "external-declaration:sym<declaration> 2"; }
 }
 #rule external-declaration:sym<control-line> { <control-line> }
 
 # SS 6.9.1
 proto rule function-definition {*}
 rule function-definition:sym<modern> {
-    { say "function-definition:sym<modern> 1"; }
+    #{ say "function-definition:sym<modern> 1"; }
     <declaration-specifiers>
-    { say "function-definition:sym<modern> 2"; }
+    #{ say "function-definition:sym<modern> 2"; }
     <declarator>
-    { say "function-definition:sym<modern> 3"; }
+    #{ say "function-definition:sym<modern> 3"; }
     <compound-statement>
-    { say "function-definition:sym<modern> 4"; }
+    #{ say "function-definition:sym<modern> 4"; }
 }
 rule function-definition:sym<ancient> {
-    { say "function-definition:sym<ancient> 1"; }
+    #{ say "function-definition:sym<ancient> 1"; }
     <declaration-specifiers>
-    { say "function-definition:sym<ancient> 2"; }
+    #{ say "function-definition:sym<ancient> 2"; }
     <declarator>
-    { say "function-definition:sym<ancient> 3"; }
+    #{ say "function-definition:sym<ancient> 3"; }
     <declaration-list>
-    { say "function-definition:sym<ancient> 4"; }
+    #{ say "function-definition:sym<ancient> 4"; }
     <compound-statement>
-    { say "function-definition:sym<ancient> 5"; }
+    #{ say "function-definition:sym<ancient> 5"; }
 }
 
 rule declaration-list { <declaration>+ }
