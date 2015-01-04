@@ -42,6 +42,11 @@ enum ExpressionTag is export <
     assign_bitand
     assign_bitxor
     assign_bitor
+    sizeof_expr
+    sizeof_type
+    alignof_type
+    alignas_type
+    alignas_expr
 >;
 
 our %CDMap = %(
@@ -108,49 +113,52 @@ enum ConstantTag is export <
 >;
 
 enum StructureTag is export <
-    ST_struct
-    ST_union
-    ST_enum
-    ST_nil
+    struct_decl
+    union_decl
+    enum_decl
+    nil_decl
 >;
 
 enum StorageSpecifierTag is export <
-    SS_auto
-    SS_register
-    SS_static
-    SS_extern
-    SS_typedef
-    SS_thread_local
+    auto
+    register
+    static
+    extern
+    typedef
+    thread_local
 >;
 
 enum TypeSpecifierTag is export < 
-    TS_void
-    TS_char
-    TS_short
-    TS_int
-    TS_long
-    TS_float
-    TS_double
-    TS_signed
-    TS_unsigned
-    TS_bool
-    TS_complex
-    TS_struct
-    TS_union
-    TS_enum
-    TS_typedef
-    TS_typeof_expr    
+    void
+    char
+    short
+    int
+    long
+    float
+    double
+    signed
+    unsigned
+    bool
+    complex
+    struct
+    union
+    enum_spec
+    typedef_spec
+    typeof_expr    
 >;
 
 enum TypeQualifierTag is export <
-    TQ_const
-    TQ_volatile 
-    TQ_restrict 
-    TQ_inline 
-    TQ_attribute 
+    const
+    volatile 
+    restrict 
+    atomic
+    attribute 
 >;
 
-
+enum FunctionSpecifierTag is export <
+    inline
+    noreturn
+>;
 
 # forward declarations
 
@@ -161,20 +169,6 @@ class Statement is export {}
 class Expression is export {}
 
 # declaration specifiers
-
-class DeclarationSpecifier is export {}
-
-class StorageSpecifier is DeclarationSpecifier is export {
-    has StorageSpecifierTag $.tag;
-}
-
-class TypeSpecifier is DeclarationSpecifier is export {
-    has TypeSpecifierTag $.tag;
-}
-
-class TypeQualifier is DeclarationSpecifier is export {
-    has TypeQualifierTag $.tag;
-}
 
 class OpExpression is export {
     has ExpressionTag $.tag;
@@ -193,7 +187,7 @@ class Identifier is PrimaryExpression is export {
 }
 
 class Constant is PrimaryExpression is export {
-    has ConstantTag $.type;
+    has ConstantTag $.tag;
     has Identifier $.ident;
     has Any $.value; # WTF
 }
@@ -212,6 +206,34 @@ class GenericSelection is PrimaryExpression is export {
     has GenericAssociation @.assocs;
 }
 
+class DeclarationSpecifier is export {}
+
+class StorageSpecifier is DeclarationSpecifier is export {
+    has StorageSpecifierTag $.tag;
+}
+
+class TypeSpecifier is DeclarationSpecifier is export {
+    has TypeSpecifierTag $.tag;
+}
+
+class TypeQualifier is DeclarationSpecifier is export {
+    has TypeQualifierTag $.tag;
+}
+
+class FunctionSpecifier is DeclarationSpecifier is export {
+    has FunctionSpecifierTag $.tag;
+}
+
+class AlignmentSpecifier is DeclarationSpecifier is export {}
+
+class AlignAsTypeSpecifier is AlignmentSpecifier is export {
+    has Identifier $.ident;
+}
+
+class AlignAsExprSpecifier is AlignmentSpecifier is export {
+    has Expression $.expr;
+}
+
 class PostfixExpression is Expression is export {}
 
 class InitializerMember is export {}
@@ -222,7 +244,6 @@ class Attribute is export {
 }
 
 class Declarator is export {
-    has Bool $.pointer;
 }
 
 class Designation is export {
@@ -242,11 +263,16 @@ class DesignationInitializer is InitializerMember is export {
 class InitDeclarator is export {
     has Declarator $.decl;
     has Initializer $.init;
-    has Expression $.expr;
+}
+
+class DirectDeclarator is Declarator is export {
+    has Any $.first;
+    has Any @.rest;
 }
 
 class PointerDeclarator is Declarator is export {
     has TypeQualifier @.quals;
+    has DirectDeclarator $.direct;
 }
 
 class ArrayDeclarator is Declarator is export {
@@ -264,6 +290,12 @@ class FunctionDeclarator is Declarator is export {
 class LabeledStatement is Statement is export {
     has Identifier $.ident;
     has Statement $.stmt;
+}
+
+class IfStatement is Statement is export {
+    has Expression $.expr;
+    has Statement $.con;
+    has Statement $.alt;
 }
 
 class SwitchStatement is Statement is export {

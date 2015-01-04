@@ -40,6 +40,9 @@ sub MAIN (Str $input = "-",
         when "nil" {
             say $ast;
         }
+        when "ast" {
+            say $ast.ast;
+        }
         when "str" {
             say $ast.Str;
         }

@@ -3,7 +3,7 @@ use v6;
 #use Grammar::Tracer;
 grammar C::Parser::StdC11Lexer;
 
-token TOP {^ <c-tokens> $}
+token TOP {^ <.ws>? <c-tokens> $ || { say "panic" } }
 
 token ws {
     <.ws-char>*
@@ -36,7 +36,7 @@ rule pp-token:sym<pp-number> { <pp-number> }
 rule pp-token:sym<character-constant> { <character-constant> }
 rule pp-token:sym<string-literal> { <string-literal> }
 rule pp-token:sym<punct> { <punct> }
-#rule pp-token:sym<none-of-above> { <!> }
+rule pp-token:sym<none-of-above> { { say "none-of-the-above"; } <!> }
 
 # SS 6.4.1
 proto token keyword {*}
@@ -161,12 +161,12 @@ token universal-character-name:sym<u> { '\\u' <xdigit> ** 4 }
 token universal-character-name:sym<U> { '\\U' <xdigit> ** 8 }
 
 proto token constant {*}
+token constant:sym<floating> {
+    <floating-constant>
+}
 token constant:sym<integer> {
     <integer-constant>
     <!before [.eE]>
-}
-token constant:sym<floating> {
-    <floating-constant>
 }
 token constant:sym<enumeration> {
     <enumeration-constant>

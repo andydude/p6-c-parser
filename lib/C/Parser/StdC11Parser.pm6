@@ -4,7 +4,7 @@ use v6;
 use C::Parser::StdC11Lexer;
 grammar C::Parser::StdC11Parser is C::Parser::StdC11Lexer;
 
-rule TOP {^ <translation-unit> $}
+rule TOP {^ <.ws>? <translation-unit> $}
 
 # SS 6.5.1
 
@@ -56,22 +56,22 @@ proto rule postfix-expression-first {*}
 rule postfix-expression-first:sym<primary> { <primary-expression> }
 rule postfix-expression-first:sym<initializer> {
     '('
-    <operator=type-name>
+    <type-name>
     ')'
     '{'
-    <operands=initializer-list> ','?
+    <initializer-list> ','?
     '}'
 }
 
 proto rule postfix-expression-rest {*}
 rule postfix-expression-rest:sym<[ ]> {
     '['
-    <operand=expression>
+    <expression>
     ']'
 }
 rule postfix-expression-rest:sym<( )> {
     '('
-    <operands=argument-expression-list>?
+    <argument-expression-list>?
     ')'
 }
 rule postfix-expression-rest:sym<.>   { <sym> <ident> }
@@ -86,13 +86,13 @@ rule argument-expression-list {
 # SS 6.5.3
 proto rule unary-expression {*}
 rule unary-expression:sym<postfix> { <postfix-expression> }
-rule unary-expression:sym<++> { <sym> <operand=unary-expression> }
-rule unary-expression:sym<--> { <sym> <operand=unary-expression> }
+rule unary-expression:sym<++> { <sym> <unary-expression> }
+rule unary-expression:sym<--> { <sym> <unary-expression> }
 rule unary-expression:sym<unary-cast> {
-    <operator=unary-operator> <operand=cast-expression>
+    <unary-operator> <cast-expression>
 }
 rule unary-expression:sym<size-of-expr> {
-    <operator=sizeof-keyword> <operand=unary-expression>
+    <sizeof-keyword> <unary-expression>
 }
 rule unary-expression:sym<size-of-type> {
     <sizeof-keyword> '(' <type-name> ')'
@@ -111,7 +111,7 @@ rule unary-operator:sym<!> { <sym> }
 
 # SS 6.5.4
 rule cast-expression {
-    <operators=cast-operator>* <operand=unary-expression>
+    <cast-operator>* <unary-expression>
 }
 
 # Nonstandard: cast-operator does not exist in C89 grammar
@@ -122,8 +122,8 @@ rule cast-operator { '(' <type-name> ')' }
 
 # SS 6.5.5
 rule multiplicative-expression {
-    <operands=cast-expression>
-    [<operators=multiplicative-operator> <operands=cast-expression>]*
+    <operands=.cast-expression>
+    [<multiplicative-operator> <operands=.cast-expression>]*
 }
 proto rule multiplicative-operator {*}
 rule multiplicative-operator:sym<*> { <sym> }
@@ -132,8 +132,8 @@ rule multiplicative-operator:sym<%> { <sym> }
 
 # SS 6.5.6
 rule additive-expression {
-    <operands=multiplicative-expression>
-    [<operators=additive-operator> <operands=multiplicative-expression>]*
+    <operands=.multiplicative-expression>
+    [<additive-operator> <operands=.multiplicative-expression>]*
 }
 proto rule additive-operator {*}
 rule additive-operator:sym<+> { <sym> }
@@ -141,8 +141,8 @@ rule additive-operator:sym<-> { <sym> }
 
 # SS 6.5.7
 rule shift-expression {
-    <operands=additive-expression>
-    [<operators=shift-operator> <operands=additive-expression>]*
+    <operands=.additive-expression>
+    [<shift-operator> <operands=.additive-expression>]*
 }
 proto rule shift-operator {*}
 rule shift-operator:sym«<<» { <sym> }
@@ -150,8 +150,8 @@ rule shift-operator:sym«>>» { <sym> }
 
 # SS 6.5.8
 rule relational-expression {
-    <operands=shift-expression>
-    [<operators=relational-operator> <operands=shift-expression>]*
+    <operands=.shift-expression>
+    [<relational-operator> <operands=.shift-expression>]*
 }
 proto rule relational-operator {*}
 rule relational-operator:sym«<»  { <sym> }
@@ -161,8 +161,8 @@ rule relational-operator:sym«>=» { <sym> }
 
 # SS 6.5.9
 rule equality-expression {
-    <operands=relational-expression>
-    [<operators=equality-operator> <operands=relational-expression>]*
+    <operands=.relational-expression>
+    [<equality-operator> <operands=.relational-expression>]*
 }
 proto rule equality-operator {*}
 rule equality-operator:sym<==> { <sym> }
@@ -170,16 +170,16 @@ rule equality-operator:sym<!=> { <sym> }
 
 # SS 6.5.10
 rule and-expression {
-    <operands=equality-expression>
-    [<operators=and-operator> <operands=equality-expression>]*
+    <operands=.equality-expression>
+    [<and-operator> <operands=.equality-expression>]*
 }
 proto rule and-operator {*}
 rule and-operator:sym<&> { <sym> }
 
 # SS 6.5.11
 rule exclusive-or-expression {
-    <operands=and-expression>
-    [<operators=exclusive-or-operator> <operands=and-expression>]*
+    <operands=.and-expression>
+    [<exclusive-or-operator> <operands=.and-expression>]*
 }
 
 proto rule exclusive-or-operator {*}
@@ -187,38 +187,38 @@ rule exclusive-or-operator:sym<^> { <sym> }
 
 # SS 6.5.12
 rule inclusive-or-expression {
-    <operands=exclusive-or-expression>
-    [<operators=inclusive-or-operator> <operands=exclusive-or-expression>]*
+    <operands=.exclusive-or-expression>
+    [<inclusive-or-operator> <operands=.exclusive-or-expression>]*
 }
 proto rule inclusive-or-operator {*}
 rule inclusive-or-operator:sym<|> { <sym> }
 
 # SS 6.5.13
 rule logical-and-expression {
-    <operands=inclusive-or-expression>
-    [<operators=logical-and-operator> <operands=inclusive-or-expression>]*
+    <operands=.inclusive-or-expression>
+    [<logical-and-operator> <operands=.inclusive-or-expression>]*
 }
 proto rule logical-and-operator {*}
 rule logical-and-operator:sym<&&> { <sym> }
 
 # SS 6.5.14
 rule logical-or-expression {
-    <operands=logical-and-expression>
-    [<operators=logical-or-operator> <operands=logical-and-expression>]*
+    <operands=.logical-and-expression>
+    [<logical-or-operator> <operands=.logical-and-expression>]*
 }
 proto rule logical-or-operator {*}
 rule logical-or-operator:sym<||> { <sym> }
 
 # SS 6.5.15
 rule conditional-expression {
-    <operands=logical-or-expression>
-    ['?' <operands=expression> ':' <operands=conditional-expression>]?
+    <operands=.logical-or-expression>
+    ['?' <operands=.expression> ':' <operands=.conditional-expression>]?
 }
 
 # SS 6.5.16
 rule assignment-expression {
-    [<operands=unary-expression> <operators=assignment-operator>]*
-    <operands=conditional-expression>
+    [<operands=.unary-expression> <assignment-operator>]*
+    <operands=.conditional-expression>
 }
 proto rule assignment-operator {*}
 rule assignment-operator:sym<=>   { <sym> }
@@ -235,7 +235,8 @@ rule assignment-operator:sym<|=>  { <sym> }
 
 # SS 6.5.17
 rule expression {
-    <operands=assignment-expression> [',' <operands=assignment-expression>]*
+    <operands=.assignment-expression>
+    [',' <operands=.assignment-expression>]*
 }
 
 # SS 6.6
@@ -487,7 +488,7 @@ rule direct-declarator {
 proto rule direct-declarator-first {*}
 
 rule direct-declarator-first:sym<identifier> {
-    <name=ident>
+    <ident>
 }
 
 rule direct-declarator-first:sym<declarator> {
