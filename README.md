@@ -16,7 +16,7 @@ Another thing to note is that it doesn't provide any understanding of C preproce
 directives, so you will have to use `gcc -E` (or the like) before parsing it. This
 can usually be accomplished by:
 
-`gcc -E FILE.c | fgrep -v '#' | bin/cdump.pl6 -`
+`gcc -E FILE.c | grep -v '^#' | bin/cdump.pl6 -`
 
 Conclusion
 ----------
