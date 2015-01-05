@@ -360,9 +360,14 @@ rule type-specifier:sym<__typeof__> { # GNU
 # SS 6.7.2.1
 proto rule struct-or-union-specifier {*}
 rule struct-or-union-specifier:sym<decl> {
+    :my $previous_typedef_context;
     #{ say "struct-or-union-specifier:sym<decl> 1"; }
     <struct-or-union> <ident>?
-    '{' <struct-declaration-list> '}'
+    '{'
+    { $previous_typedef_context = $*TYPEDEF_CONTEXT; $*TYPEDEF_CONTEXT = False; }
+    <struct-declaration-list>
+    { $*TYPEDEF_CONTEXT = $previous_typedef_context; }
+    '}'
     #{ say "struct-or-union-specifier:sym<decl> 2"; }
 }
 rule struct-or-union-specifier:sym<spec> {
