@@ -58,6 +58,12 @@ method s-char-sequence($/) {
     make Constant.new(:$tag, :$value);
 }
 
+method string-constant($/) {
+    my $tag = ConstantTag::string;
+    my $value = (map {$_.ast.value}, @<string-literal>).join;
+    make Constant.new(:$tag, :$value);
+}
+
 # SS 6.4.3
 
 method constant:sym<integer>($/) {
@@ -89,7 +95,7 @@ method primary-expression:sym<constant>($/) {
 
 method primary-expression:sym<string-literal>($/) { 
     #say "StringConstant: " ~ $<string-literal>.perl;
-    make $<string-literal>.ast;
+    make $<string-constant>.ast;
 }
 
 method primary-expression:sym<expression>($/) {
@@ -603,9 +609,13 @@ method pointer:sym<pointer>($/) {
     make PointerDeclarator.new(:@quals);
 }
 
-method type-qualifier-list($/) { make map {$_.ast}, @<type-qualifier> }
-method parameter-type-list:sym<...>($/) { make $<parameter-list>.ast }
-method parameter-type-list:sym<end>($/) { make $<parameter-list>.ast }
+method type-qualifier-list($/) {
+    make map {$_.ast}, @<type-qualifier>
+}
+
+method parameter-type-list:sym<std>($/) {
+    make $<parameter-list>.ast
+}
 
 method parameter-list($/) {
     make map {$_.ast}, @<parameter-declaration>;
@@ -765,7 +775,6 @@ method compound-statement($/) {
 }
 method block-item-list($/) {
     my @items = map {$_.ast}, @<block-item>;
-    say @items.perl;
     make BlockStatement.new(:@items);
 }
 method block-item:sym<declaration>($/) {
@@ -832,15 +841,7 @@ method external-declaration:sym<declaration>($/) {
 }
 
 # SS 6.9.1
-method function-definition:sym<modern>($/) {
-    my @modifiers = map {$_.ast}, @<declaration-specifiers>;
-    my $head = $<declarator>.ast;
-    my $body = $<compound-statement>.ast;
-    make FunctionDeclaration.new(
-        :@modifiers, :$head, :$body);
-}
-
-method function-definition:sym<ancient>($/) {
+method function-definition:sym<std>($/) {
     my @modifiers = map {$_.ast}, @<declaration-specifiers>;
     my @ancients = map {$_.ast}, @<declaration-list>;
     my $head = $<declarator>.ast;

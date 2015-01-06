@@ -3,7 +3,7 @@ use v6;
 #use Grammar::Tracer;
 grammar C::Parser::StdC11Lexer;
 
-token TOP {^ <.ws>? <c-tokens> $ || { say "panic" } }
+token TOP {^ <.ws> <c-tokens> [$ || {die("expected eof")}] }
 
 token ws {
     <.ws-char>*
@@ -120,16 +120,19 @@ token void-keyword     { 'void' }
 token volatile-keyword { 'volatile' }
 token while-keyword    { 'while' }
 
-token alignas-keyword 		{ '_Alignas' }
-token alignof-keyword 		{ '_Alignof' }
-token atomic-keyword 		{ '_Atomic' }
-token bool-keyword 			{ '_Bool' }
-token complex-keyword 		{ '_Complex' }
-token generic-keyword 		{ '_Generic' }
-token imaginary-keyword 	{ '_Imaginary' }
-token noreturn-keyword 		{ '_Noreturn' }
-token static-assert-keyword { '_Static_assert' }
-token thread-local-keyword  { '_Thread_local' }
+token alignas-keyword 		{ '_Alignas' || 'alignas' }
+token alignof-keyword 		{ '_Alignof' || 'alignof' }
+token atomic-keyword 		{ '_Atomic' || 'atomic' }
+token bool-keyword 			{ '_Bool' || 'bool' }
+token complex-keyword 		{ '_Complex' || 'complex' }
+token generic-keyword 		{ '_Generic' || 'generic' }
+token imaginary-keyword 	{ '_Imaginary' || 'imaginary' }
+token noreturn-keyword 		{ '_Noreturn' || 'noreturn' }
+token static-assert-keyword { '_Static_assert' || 'static_assert' }
+token thread-local-keyword  { '_Thread_local' || 'thread_local' }
+
+token asm-keyword  			{ '__asm__' || '__asm' || 'asm' }
+token attribute-keyword 	{ '__attribute__' }
 
 # SS 6.4.2.1
 
@@ -307,6 +310,8 @@ token s-char-sequence { <s-char>+ }
 proto token s-char {*}
 token s-char:sym<any> { <-[\"\\\n]> }
 token s-char:sym<escape> { <escape-sequence> }
+
+rule string-constant { [<string-literal> <.ws>]+ }
 
 # punctuator
 proto token punct {*}

@@ -4,7 +4,266 @@ use v6;
 use C::Parser::StdC11Lexer;
 grammar C::Parser::StdC11Parser is C::Parser::StdC11Lexer;
 
-rule TOP {^ <.ws>? <translation-unit> $}
+rule TOP {
+    :my %*ENUMS;
+    :my %*STRUCTS;
+    :my %*TYPEDEFS;
+    :my @*CONTEXTS = @();
+
+    # BUILTIN_TYPEDEFS never changes
+    # maybe this could be const/final?
+    :my @*BUILTIN_TYPEDEFS = qw<<<
+        __builtin_va_list
+        gboolean
+        gchar
+        gconstpointer
+        gdouble
+        gfloat
+        gint
+        gint16
+        gint32
+        gint64
+        gint8
+        glong
+        gpointer
+        gshort
+        gsize
+        gssize
+        guchar
+        guint
+        guint16
+        guint32
+        guint64
+        guint8
+        gulong
+        gushort
+        DIR
+        FILE
+        blkcnt_t
+        blksize_t
+        cc_t
+        char16_t
+        char32_t
+        clock_t
+        clockid_t
+        cnd_t
+        dev_t
+        div_t
+        double_t
+        fenv_t
+        fexcept_t
+        float_t
+        fpos_t
+        fsblkcnt_t
+        fsfilcnt_t
+        gid_t
+        glob_t
+        id_t
+        idtype_t
+        imaxdiv_t
+        in_addr_t
+        in_port_t
+        ino_t
+        int16_t
+        int32_t
+        int64_t
+        int8_t
+        int_fast16_t
+        int_fast32_t
+        int_fast64_t
+        int_fast8_t
+        int_least16_t
+        int_least32_t
+        int_least64_t
+        int_least8_t
+        intmax_t
+        intptr_t
+        key_t
+        ldiv_t
+        lldiv_t
+        locale_t
+        mbstate_t
+        mode_t
+        msglen_t
+        msgqnum_t
+        mtx_t
+        nlink_t
+        off_t
+        off_t
+        once_flag
+        pid_t
+        pthread_attr_t
+        pthread_barrier_t
+        pthread_barrierattr_t
+        pthread_cond_t
+        pthread_condattr_t
+        pthread_key_t
+        pthread_mutex_t
+        pthread_mutexattr_t
+        pthread_once_t
+        pthread_rwlock_t
+        pthread_rwlockattr_t
+        pthread_spinlock_t
+        pthread_t
+        ptrdiff_t
+        regex_t
+        regmatch_t
+        regoff_t
+        rsize_t
+        sa_family_t
+        sem_t
+        sig_atomic_t
+        siginfo_t
+        sigset_t
+        size_t
+        socklen_t
+        speed_t
+        ssize_t
+        suseconds_t
+        tcflag_t
+        thrd_start_t
+        thrd_t
+        time_t
+        timer_t
+        trace_attr_t
+        trace_event_id_t
+        trace_event_set_t
+        trace_id_t
+        tss_dtor_t
+        tss_t
+        uid_t
+        uint16_t
+        uint32_t
+        uint64_t
+        uint8_t
+        uint_fast16_t
+        uint_fast32_t
+        uint_fast64_t
+        uint_fast8_t
+        uint_least16_t
+        uint_least32_t
+        uint_least64_t
+        uint_least8_t
+        uintmax_t
+        uintptr_t
+        useconds_t
+        va_list
+        wchar_t
+        wctrans_t
+        wctype_t
+        wint_t
+        wordexp_t
+    >>>;
+    {
+        for @*BUILTIN_TYPEDEFS -> Str $typename {
+            #note("new builtin typedef '{$typename}'");
+            %*TYPEDEFS{$typename} = True;
+        }
+    }
+	^ <.ws> <translation-unit>
+    [$ || {die("expected eof")}]
+}
+
+# subroutines for typedefs
+
+sub push_context(Str $ctx) {
+    @*CONTEXTS.push($ctx)
+}
+
+sub pop_context(--> Str) {
+    @*CONTEXTS.pop()
+}
+
+sub context_is(Str $ctx --> Bool) {
+    if @*CONTEXTS.elems < 1 {
+        return False;
+    }
+    if @*CONTEXTS[*-1] ne $ctx {
+        return False;
+    }
+    return True;
+}
+
+sub get_declarator_name(Match $decr --> Str) {
+    my Match $ddecr1 = $decr<direct-declarator><direct-declarator-first>;
+    my Str $name = $ddecr1<declarator> ?? get_declarator_name($ddecr1<declarator>) !! $ddecr1<ident><name>.Str;
+    return $name;
+}
+
+sub end_declaration(Any $decls, Any $inits) {
+    if @*CONTEXTS < 1 {
+       return;
+    }
+    my $context_was = @*CONTEXTS[*-1];
+    if context_is('struct') || context_is('union') {
+        pop_context();
+    }
+    my $context = @*CONTEXTS[*-1];
+    if !context_is('typedef') {
+        return;
+    }
+    pop_context();
+
+    if $inits && $inits<init-declarator> {
+        if !$inits<init-declarator>[0] {
+            warn("unknown condition in $context!");
+            return;
+        }
+        if !$inits<init-declarator>[0]<declarator> {
+            warn("unknown condition in $context!");
+            return;
+        }
+        
+        my Match $decr = $inits<init-declarator>[0]<declarator>;
+        my Str $name = get_declarator_name($decr);
+        if $name ∈ @*BUILTIN_TYPEDEFS {
+            #note("builtin $context '$name'");
+        }
+        elsif %*TYPEDEFS{$name}:exists {
+            warn("redefining $context '$name'!");
+        }
+        %*TYPEDEFS{$name} = True;
+    }
+    elsif $decls && $decls<declaration-specifier> {
+        if !$decls<declaration-specifier>[*-1] {
+            warn("unknown condition in $context!");
+            return;
+        }
+        if !$decls<declaration-specifier>[*-1]<type-specifier> {
+            warn("unknown condition in $context!");
+            return;
+        }
+        if !$decls<declaration-specifier>[*-1]<type-specifier><typedef-name> {
+            warn("unknown condition in $context!");
+            return;
+        }
+        if !$decls<declaration-specifier>[*-1]<type-specifier><typedef-name><ident> {
+            warn("unknown condition in $context!");
+            return;
+        }
+        
+        my Match $ident = $decls<declaration-specifier>[*-1]<type-specifier><typedef-name><ident>;
+        my Str $name = $ident<name>.Str;
+        if $name ∈ @*BUILTIN_TYPEDEFS {
+            #note("builtin $context '$name'");
+        }
+        elsif %*TYPEDEFS{$name}:exists {
+            warn("redefining $context '$name'!");
+        }
+        %*TYPEDEFS{$name} = True;
+    }
+    else {
+        warn("unknown condition in $context!");
+    }
+
+}
+
+sub is_typedef(Match $ident --> Bool) {
+    return False if !$ident;
+    return False if !$ident<name>;
+	%*TYPEDEFS{$ident<name>.Str}:exists
+}
+
 
 # SS 6.5.1
 
@@ -16,7 +275,7 @@ rule primary-expression:sym<constant> {
     <constant>
 }
 rule primary-expression:sym<string-literal> {
-    <string-literal>
+    <string-constant>
 }
 rule primary-expression:sym<expression> {
     '(' <expression> ')'
@@ -251,24 +510,14 @@ rule constant-expression { <conditional-expression> }
 proto rule declaration {*}
 rule declaration:sym<declaration> {
     <declaration-specifiers> <init-declarator-list>? ';'
+    {end_declaration($<declaration-specifiers>, $<init-declarator-list>)}
 }
 rule declaration:sym<static_assert> { # C11
     <static-assert-declaration>
 }
 
 rule declaration-specifiers {
-    #{ say "declaration-specifiers 1"; }
     <declaration-specifier>+
-    #{ say "declaration-specifiers 2"; }
-    {
-        if $*TYPEDEF_CONTEXT {
-            my $typedef_name = $<declaration-specifier>[*-1]<type-specifier><typedef-name><ident><name>.Str;
-            my @typedef_type = $<declaration-specifier>[1..*-2];
-            %*TYPEDEFS{$typedef_name} = @typedef_type;
-            $*TYPEDEF_CONTEXT = False;
-        }
-    }
-    #{ say "declaration-specifiers 3"; }
 }
 
 # Nonstandard: declaration-specifier does not exist in C89 grammar
@@ -300,18 +549,24 @@ rule declaration-specifier:sym<alignment> {
     <alignment-specifier>
     #{ say "declaration-specifier:sym<alignment> 2"; }
 }
+rule declaration-specifier:sym<__attribute__> { # GNU
+    <attribute-keyword>
+    '(('
+    <attribute-specifier-list>
+    '))'
+}
 
 rule init-declarator-list { <init-declarator> [',' <init-declarator>]* }
 rule init-declarator { <declarator> ['=' <initializer>]? }
 
 # SS 6.7.1
 proto rule storage-class-specifier {*}
-rule storage-class-specifier:sym<typedef>  { <sym> { $*TYPEDEF_CONTEXT = True; } }
-rule storage-class-specifier:sym<extern>   { <sym> { $*EXTERN_CONTEXT = True; } }
-rule storage-class-specifier:sym<static>   { <sym> { $*STATIC_CONTEXT = True; } }
+rule storage-class-specifier:sym<typedef>  { <sym> {push_context('typedef')} }
+rule storage-class-specifier:sym<extern>   { <sym> {push_context('extern')} }
+rule storage-class-specifier:sym<static>   { <sym> }
 rule storage-class-specifier:sym<_Thread_local> { <sym> { $*THREAD_LOCAL_CONTEXT = True; } }
-rule storage-class-specifier:sym<auto>     { <sym> { $*AUTO_CONTEXT = True; } }
-rule storage-class-specifier:sym<register> { <sym> { $*REGISTER_CONTEXT = True; } }
+rule storage-class-specifier:sym<auto>     { <sym> }
+rule storage-class-specifier:sym<register> { <sym> }
 
 # SS 6.7.2
 proto rule type-specifier {*}
@@ -324,32 +579,25 @@ rule type-specifier:sym<float>    { <sym> }
 rule type-specifier:sym<double>   { <sym> }
 rule type-specifier:sym<signed>   { <sym> }
 rule type-specifier:sym<unsigned> { <sym> }
-rule type-specifier:sym<_Bool>    { <sym> }
-rule type-specifier:sym<_Complex> { <sym> }
-rule type-specifier:sym<atomic-type>     {
-    #{ say "type-specifier:sym<atomic-type> 1"; }
+rule type-specifier:sym<_Bool>    { <sym> } # stdbool.h
+rule type-specifier:sym<_Complex> { <sym> } # complex.h
+rule type-specifier:sym<_Fract>   { <sym> } # stdfix.h
+rule type-specifier:sym<_Accum>   { <sym> } # stdfix.h
+rule type-specifier:sym<_Sat>     { <sym> } # stdfix.h
+rule type-specifier:sym<atomic-type>     {  # stdatomic.h
     <atomic-type-specifier>
-    #{ say "type-specifier:sym<atomic-type> 1"; }
 }
 rule type-specifier:sym<struct-or-union> {
-    #{ say "type-specifier:sym<struct-or-union> 1"; }
     <struct-or-union-specifier>
-    #{ say "type-specifier:sym<struct-or-union> 2"; }
 }
 # TODO
 rule type-specifier:sym<enum-specifier>  {
-    #{ say "type-specifier:sym<enum-specifier> 1"; }
     <enum-specifier>
-    #{ say "type-specifier:sym<enum-specifier> 2"; }
 }
 rule type-specifier:sym<typedef-name>    {
-    #{ say "type-specifier:sym<typedef-name> 1"; }
     <typedef-name>
-    #{ say "type-specifier:sym<typedef-name> 2"; }
-    <?{ ($*TYPEDEF_CONTEXT) || (%*TYPEDEFS{$<typedef-name><ident><name>.Str}:exists) }>
-    #{ say "type-specifier:sym<typedef-name> 3"; }
 }
-# TODO: add check for if it's been typedef'd
+
 rule type-specifier:sym<__typeof__> { # GNU
     <sym>
     '('
@@ -360,28 +608,31 @@ rule type-specifier:sym<__typeof__> { # GNU
 # SS 6.7.2.1
 proto rule struct-or-union-specifier {*}
 rule struct-or-union-specifier:sym<decl> {
-    :my $previous_typedef_context;
-    #{ say "struct-or-union-specifier:sym<decl> 1"; }
-    <struct-or-union> <ident>?
+    :my $ctx;
+    <struct-or-union>
+    <ident>?
     '{'
-    { $previous_typedef_context = $*TYPEDEF_CONTEXT; $*TYPEDEF_CONTEXT = False; }
+    {push_context('strunion')}
     <struct-declaration-list>
-    { $*TYPEDEF_CONTEXT = $previous_typedef_context; }
     '}'
-    #{ say "struct-or-union-specifier:sym<decl> 2"; }
 }
 rule struct-or-union-specifier:sym<spec> {
     #{ say "struct-or-union-specifier:sym<spec> 1"; }
-    <struct-or-union> <ident> <!before '{'>
+    <struct-or-union>
+    [[<ident> <!before '{'>]
+    || {pop_context()} <!>]
     #{ say "struct-or-union-specifier:sym<spec> 2"; }
+    
 }
 
 proto rule struct-or-union {*}
 rule struct-or-union:sym<struct> {
     <struct-keyword>
+    {push_context('struct')}
 }
 rule struct-or-union:sym<union>  {
     <union-keyword>
+    {push_context('union')}
 }
 
 rule struct-declaration-list {
@@ -413,25 +664,22 @@ rule struct-declarator-list {
 }
 
 proto rule struct-declarator {*}
-rule struct-declarator:sym<declarator> {
-    <declarator>
+rule struct-declarator:sym<std> {
+    <declarator> [':' <constant-expression>]?
 }
-rule struct-declarator:sym<bit-declarator> {
-    <declarator>? ':' <constant-expression>
+rule struct-declarator:sym<bit> {
+    ':' <constant-expression> 
 }
 
 # SS 6.7.2.2
 proto rule enum-specifier {*}
 rule enum-specifier:sym<decl> {
-    #{ say "enum-specifier:sym<decl> 1"; }
     <enum-keyword> <ident>?
-    #{ say "enum-specifier:sym<decl> 2"; }
     '{'
-    #{ say "enum-specifier:sym<decl> 3"; }
+    {push_context('enum')}
     <enumerator-list> ','?
-    #{ say "enum-specifier:sym<decl> 4"; }
+    {pop_context()}
     '}'
-    #{ say "enum-specifier:sym<decl> 5"; }
 }
 rule enum-specifier:sym<spec> {
     <enum-keyword> <ident> <!before '{'>
@@ -446,15 +694,10 @@ rule enumerator {
 # SS 6.7.2.4
 proto rule atomic-type-specifier {*} # C11
 rule atomic-type-specifier:sym<_Atomic> {
-    #{ say "atomic-type-specifier:sym<_Atomic> 1"; }
     <atomic-keyword>
-    #{ say "atomic-type-specifier:sym<_Atomic> 2"; }
     '('
-    #{ say "atomic-type-specifier:sym<_Atomic> 3"; }
     <type-name>
-    #{ say "atomic-type-specifier:sym<_Atomic> 4"; }
     ')'
-    #{ say "atomic-type-specifier:sym<_Atomic> 5"; }
 }
 
 # SS 6.7.3
@@ -472,18 +715,12 @@ rule function-specifier:sym<_Noreturn> { <sym> }
 # SS 6.7.5
 proto rule alignment-specifier {*}
 rule alignment-specifier:sym<type-name> {
-    #{ say "alignment-specifier:sym<type-name> 1"; }
     <alignas-keyword>
-    #{ say "alignment-specifier:sym<type-name> 2"; }
     '(' <type-name> ')'
-    #{ say "alignment-specifier:sym<type-name> 3"; }
 }
 rule alignment-specifier:sym<constant> {
-    #{ say "alignment-specifier:sym<constant> 1"; }
     <alignas-keyword>
-    #{ say "alignment-specifier:sym<constant> 2"; }
     '(' <constant-expression> ')'
-    #{ say "alignment-specifier:sym<constant> 3"; }
 }
 
 # SS 6.7.6
@@ -551,8 +788,17 @@ rule direct-declarator-rest:sym<p-identifier-list> {
     ')'
     #{ say "direct-declarator-rest:sym<p-identifier-list> 2"; }
 }
+rule direct-declarator-rest:sym<__asm__> { # GNU
+    <assembly>
+}
 rule direct-declarator-rest:sym<__attribute__> { # GNU
-    <sym>
+    <attribute>
+}
+
+# Nonstandard extensions:
+
+rule attribute { # GNU
+    <attribute-keyword>
     '(('
     <attribute-specifier-list>
     '))'
@@ -563,18 +809,25 @@ rule attribute-specifier-list { # GNU
 }
 
 rule attribute-specifier { # GNU
-    <ident> ['(' <primary-expression> ')']?
+    <ident> ['(' <argument-expression-list> ')']?
 }
 
+proto rule assembly {*}
+rule assembly:sym<std> {
+    <asm-keyword>
+    '('
+    <string-constant>
+    ')'
+}
 
 proto rule pointer {*}
 rule pointer:sym<pointer> { '*' <type-qualifier-list>? }
+rule pointer:sym<block> { '^' <type-qualifier-list>? } # Apple Blocks
 
 rule type-qualifier-list { <type-qualifier>+ }
 
 proto rule parameter-type-list {*}
-rule parameter-type-list:sym<...> { <parameter-list> ',' '...' }
-rule parameter-type-list:sym<end> { <parameter-list> }
+rule parameter-type-list:sym<std> { <parameter-list> $<ellipsis>=[',' '...']? }
 
 rule parameter-list {
     <parameter-declaration> [',' <parameter-declaration>]*
@@ -634,7 +887,15 @@ rule direct-abstract-declarator-rest:sym<p-parameter-type-list> {
 }
 
 # SS 6.7.8
-rule typedef-name { <ident> }
+rule typedef-name {
+    <ident>
+    {
+        if is_typedef($<ident>) && ($<ident><name>.Str ∉ @*BUILTIN_TYPEDEFS) {
+           note "found typedef '{$<ident><name>.Str}'";
+        }
+    }
+    <?{ is_typedef($<ident>) }>
+}
 
 # SS 6.7.9
 proto rule initializer {*}
@@ -671,7 +932,7 @@ rule static-assert-declaration { # C11
     '('
     <constant-expression>
     ','
-    <string-literal>
+    <string-constant>
     ')'
     ';'
 }
@@ -709,7 +970,7 @@ rule block-item:sym<declaration> { <declaration> }
 rule block-item:sym<statement> { <statement> }
 rule block-item:sym<function-definition> { <function-definition> } # GNU
 
-    
+
 # SS 6.8.3
 rule expression-statement { <expression>? ';' }
 
@@ -785,50 +1046,32 @@ rule jump-statement:sym<return> {
 
 # SS 6.9
 rule translation-unit {
-    :my $*STATIC_CONTEXT = False;
-    :my $*TYPEDEF_CONTEXT = False;
-    :my $*EXTERN_CONTEXT = False;
-    :my %*TYPEDEFS;
-    :my %*STRUCTS;
-    :my %*ENUMS;
-    
     <external-declaration>+
 }
 
-proto rule external-declaration {*}
+proto rule external-declaration {*} 
 rule external-declaration:sym<function-definition> {
-    #{ say "external-declaration:sym<function-definition> 1"; }
+    :my @ctxs = @*CONTEXTS; 
     <function-definition>
-    #{ say "external-declaration:sym<function-definition> 2"; }
+    || {@*CONTEXTS = @ctxs} <!>
 }
 rule external-declaration:sym<declaration> {
-    #{ say "external-declaration:sym<declaration> 1"; }
+    :my @ctxs = @*CONTEXTS; 
     <declaration>
-    #{ say "external-declaration:sym<declaration> 2"; }
+    || {@*CONTEXTS = @ctxs} <!>
+}
+rule external-declaration:sym<__asm__> {
+    <assembly>
 }
 #rule external-declaration:sym<control-line> { <control-line> }
 
 # SS 6.9.1
 proto rule function-definition {*}
-rule function-definition:sym<modern> {
-    #{ say "function-definition:sym<modern> 1"; }
+rule function-definition:sym<std> {
     <declaration-specifiers>
-    #{ say "function-definition:sym<modern> 2"; }
     <declarator>
-    #{ say "function-definition:sym<modern> 3"; }
+    <declaration-list>?
     <compound-statement>
-    #{ say "function-definition:sym<modern> 4"; }
-}
-rule function-definition:sym<ancient> {
-    #{ say "function-definition:sym<ancient> 1"; }
-    <declaration-specifiers>
-    #{ say "function-definition:sym<ancient> 2"; }
-    <declarator>
-    #{ say "function-definition:sym<ancient> 3"; }
-    <declaration-list>
-    #{ say "function-definition:sym<ancient> 4"; }
-    <compound-statement>
-    #{ say "function-definition:sym<ancient> 5"; }
 }
 
 rule declaration-list { <declaration>+ }
@@ -867,5 +1110,5 @@ rule declaration-list { <declaration>+ }
 # SS 6.10.9 Pragma operator
 
 rule pragma-operator {
-    '_Pragma' '(' <string-literal> ')'
+    '_Pragma' '(' <string-constant> ')'
 }
