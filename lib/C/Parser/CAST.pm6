@@ -2,43 +2,43 @@ use v6;
 module C::Parser::CAST is export;
 
 enum ExpressionTag is export <
-    post_increment
-    post_decrement
-    pre_increment
-    pre_decrement
-    pre_reference
-    pre_dereference
-    pre_positive
-    pre_negative
+    postinc
+    postdec
+    preinc
+    predec
+    preref
+    prederef
+    prepos
+    preneg
     bitand
     bitnot
     bitor
+    bitshiftl
+    bitshiftr
     bitxor
-    divide
+    add
     and
-    eq
-    geq
-    gt
+    div
     if_exp
-    left_shift
-    leq
-    lt
-    minus
-    neq
+    iseq
+    isge
+    isgt
+    isle
+    islt
+    isne
+    mod
+    mul
     not
     or
-    plus
-    remainder
-    right_shift
-    times
+    sub
     assign
-    assign_times
-    assign_divide
-    assign_remainder
-    assign_plus
-    assign_minus
-    assign_left_shift
-    assign_right_shift
+    assign_mul
+    assign_div
+    assign_mod
+    assign_add
+    assign_sub
+    assign_bitshiftl
+    assign_bitshiftr
     assign_bitand
     assign_bitxor
     assign_bitor
@@ -51,42 +51,42 @@ enum ExpressionTag is export <
 >;
 
 our %CDMap = %(
-    'post++' => ExpressionTag::post_increment,
-    'post--' => ExpressionTag::post_decrement,
-    'pre++' => ExpressionTag::pre_increment,
-    'pre--' => ExpressionTag::pre_decrement,
-    'pre&' => ExpressionTag::pre_reference,
-    'pre*' => ExpressionTag::pre_dereference,
-    'pre+' => ExpressionTag::pre_positive,
-    'pre-' => ExpressionTag::pre_negative,
+    'post++' => ExpressionTag::postinc,
+    'post--' => ExpressionTag::postdec,
+    'pre++' => ExpressionTag::preinc,
+    'pre--' => ExpressionTag::predec,
+    'pre&' => ExpressionTag::preref,
+    'pre*' => ExpressionTag::prederef,
+    'pre+' => ExpressionTag::prepos,
+    'pre-' => ExpressionTag::preneg,
     '~'   => ExpressionTag::bitnot,
     '!'   => ExpressionTag::not, 
     '? :' => ExpressionTag::if_exp,
-    '*'   => ExpressionTag::times,
-    '/'   => ExpressionTag::divide,
-    '%'   => ExpressionTag::remainder,
-    '+'   => ExpressionTag::plus,
-    '-'   => ExpressionTag::minus,
-    '<<'  => ExpressionTag::left_shift,
-    '>>'  => ExpressionTag::right_shift,
-    '<'   => ExpressionTag::lt,
-    '>'   => ExpressionTag::gt,
-    '<='  => ExpressionTag::leq,
-    '>='  => ExpressionTag::geq,
-    '=='  => ExpressionTag::eq,
-    '!='  => ExpressionTag::neq,
+    '*'   => ExpressionTag::mul,
+    '/'   => ExpressionTag::div,
+    '%'   => ExpressionTag::mod,
+    '+'   => ExpressionTag::add,
+    '-'   => ExpressionTag::sub,
+    '<<'  => ExpressionTag::bitshiftl,
+    '>>'  => ExpressionTag::bitshiftr,
+    '<'   => ExpressionTag::islt,
+    '>'   => ExpressionTag::isgt,
+    '<='  => ExpressionTag::isle,
+    '>='  => ExpressionTag::isge,
+    '=='  => ExpressionTag::iseq,
+    '!='  => ExpressionTag::isne,
     '&'   => ExpressionTag::bitand,
     '^'   => ExpressionTag::bitxor,
     '|'   => ExpressionTag::bitor,
     '&&'  => ExpressionTag::and, 
     '||'  => ExpressionTag::or, 
-    '*='  => ExpressionTag::assign_times,
-    '/='  => ExpressionTag::assign_divide,
-    '%='  => ExpressionTag::assign_remainder,
-    '+='  => ExpressionTag::assign_plus,
-    '-='  => ExpressionTag::assign_minus,
-    '<<=' => ExpressionTag::assign_left_shift,
-    '>>=' => ExpressionTag::assign_right_shift,
+    '*='  => ExpressionTag::assign_mul,
+    '/='  => ExpressionTag::assign_div,
+    '%='  => ExpressionTag::assign_mod,
+    '+='  => ExpressionTag::assign_add,
+    '-='  => ExpressionTag::assign_sub,
+    '<<=' => ExpressionTag::assign_bitshiftl,
+    '>>=' => ExpressionTag::assign_bitshiftr,
     '&='  => ExpressionTag::assign_bitand,
     '^='  => ExpressionTag::assign_bitxor,
     '|='  => ExpressionTag::assign_bitor,
@@ -130,7 +130,7 @@ enum StorageSpecifierTag is export <
     thread_local
 >;
 
-enum TypeSpecifierTag is export < 
+enum TypeSpecifierTag is export <
     void
     char
     short
@@ -165,8 +165,6 @@ enum FunctionSpecifierTag is export <
 # forward declarations
 
 class Compound is export {}
-
-class Declaration is export {...}
 
 class Statement is Compound is export {}
 
@@ -296,7 +294,7 @@ class ArrayDeclarator is Declarator is export {
 
 class FunctionDeclarator is Declarator is export {
     has Identifier $.ident;
-    has Declaration @.decls;
+    #has Declaration @.decls;
     has Attribute @.attrs;
 }
 
@@ -351,8 +349,7 @@ class DoWhileStatement is Statement is export {
 }
 
 class ForStatement is Statement is export {
-    has Declaration $.decl; # C99 init
-    has Expression $.init;  # C89 init
+    has Compound $.init;  # C89 init, C99 init
     has Expression $.test;
     has Expression $.step;
     has Statement $.body;
@@ -378,31 +375,69 @@ class AssemblyStatement is Statement is export {
     has AssemblyOperand @.outputs;
 }
 
+class Type is export {}
+
+class Var is export {
+      has Type $.type;
+      has Identifier $.ident;
+}
+
+class BitVar is Var is export {
+      has Expression $.bitsize;
+}
+
+class EllipsisVar is Var is export {
+}
+
+class DirectType is Type is export {
+      has DeclarationSpecifier @.specs;
+}
+
+class ArrayType is Type is export {
+      has Type @.type;
+      has Expression @.size;
+}
+
+class PointerType is Type is export {
+      has Type @.type;
+      has TypeQualifier @.quals;
+}
+
+class FunctionType is Type is export {
+      has DirectType @.first;
+      
+}
+
+class StructureType is Type is export {
+      has StructureType @.tag;
+      has Var @.fields;
+}
+
 # external declarations
 
-class ExternalDeclaration is export {}
+class External is export {}
 
-class Declaration is ExternalDeclaration is Compound is export {
-    has DeclarationSpecifier @.modifiers;
+class Declaration is External is Compound is export {
+    has DeclarationSpecifier @.specs;
     has InitDeclarator @.inits;
 }
 
-class TypeDefDeclaration is ExternalDeclaration is export {
+class TypeDefinition is External is export {
     has DeclarationSpecifier @.specs;
     has Identifier $.ident;
 }
 
-class FunctionDeclaration is ExternalDeclaration is export {
-    has DeclarationSpecifier @.modifiers;
+class FunctionDeclaration is External is export {
+    has DeclarationSpecifier @.specs;
     has Declarator $.head;
     has Declaration @.ancients;
     has Statement $.body;
 }
 
-class AssemblyDeclaration is ExternalDeclaration is export {
+class AssemblyLiteral is External is export {
     has Str $.literal;
 }
 
 class TranslationUnit is export {
-    has ExternalDeclaration @.decls;
+    has External @.decls;
 }

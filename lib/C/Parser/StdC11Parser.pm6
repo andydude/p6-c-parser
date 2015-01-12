@@ -1044,6 +1044,31 @@ rule jump-statement:sym<return> {
     <return-keyword> <expression>? ';'
 }
 
+############################################################
+##
+##  Keywords
+##
+
+############################################################
+##
+##  Constants
+##
+
+############################################################
+##
+##  Expressions
+##
+
+############################################################
+##
+##  Compound Statements and External Declarations
+##
+
+############################################################
+##
+##  Translation Unit
+##
+
 # SS 6.9
 rule translation-unit {
     <external-declaration>+

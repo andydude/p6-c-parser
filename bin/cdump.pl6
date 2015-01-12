@@ -2,6 +2,7 @@
 use v6;
 use lib 'lib';
 use C::Parser::CASTActions;
+use C::Parser::CAST2Actions;
 use C::Parser::StdC11Lexer;
 use C::Parser::StdC11Parser;
 
@@ -64,6 +65,10 @@ sub MAIN (Str $input = "-",
     given $actions {
         when "nil" {
             $ast = $parser.parse($source);
+        }
+        when "cast2" {
+            my $actions = C::Parser::CAST2Actions.new();
+            $ast = $parser.parse($source, :$actions);
         }
         when "cast" {
             my $actions = C::Parser::CASTActions.new();
