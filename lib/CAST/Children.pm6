@@ -1,3 +1,3 @@
 use v6;
-role CAST::Parent;
+role CAST::Children;
 has @.children handles <list>;

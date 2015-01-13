@@ -1,0 +1,11 @@
+use v6;
+use CAST::Node;
+use CAST::Type;
+use CAST::Typed;
+use CAST::Children;
+class CAST::FuncType
+is CAST::Node
+does CAST::Type
+does CAST::Typed
+does CAST::Children;
+# has Arg @children

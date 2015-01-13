@@ -1,2 +1,2 @@
 use v6;
-role External;
+role CAST::External;
