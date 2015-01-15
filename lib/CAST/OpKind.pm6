@@ -40,29 +40,36 @@ enum OpKind <
     assign_bitand
     assign_bitxor
     assign_bitor
-    sizeof_expr
-    sizeof_type
-    alignof_type
-    alignas_type
+
     alignas_expr
-    atomic_type
+    alignas_type
+    alignof_type
+    apple_block_declarator
+    apple_block_expr
+    apple_block_var
     array_declarator
     array_designator
     array_selector
+    variably_modified_array_type
+    variable_length_array_type
+    fixed_length_array_type
     array_type
-    apple_block_declarator
-    apple_block_function_expr
+    atomic_type
     break_stmt
     call
     cast
     cast_initializer_list
     compound_stmt
+    compound_literal
     continue_stmt
+    declaration
     direct_declarator
     direct_selector
     direct_type
     do_while_stmt
     enum_type
+    enumerator
+    parameter_declaration
     for_declaration
     for_stmt
     function_declarator
@@ -70,10 +77,10 @@ enum OpKind <
     generic_case
     generic_default
     generic_expr
-    goto_s_stmt
     goto_stmt
     if_expr
     if_stmt
+    indirect_goto_stmt
     indirect_selector
     init_declarator
     initializer
@@ -84,16 +91,29 @@ enum OpKind <
     pointer_declarator
     pointer_type
     return_stmt
+    sizeof_expr
+    sizeof_type
+    struct_bit_declarator
+    struct_declaration
+    struct_declarator
     struct_designator
     struct_type
     switch_case
     switch_default
     switch_stmt
+    typeof_expr
     union_type
     while_stmt
-    struct_declaration
-    struct_declarator
-    struct_bit_declarator
-    enumerator
-    x
+    cpp_define
+    cpp_else
+    cpp_elseif
+    cpp_endif
+    cpp_if
+    cpp_ifdef
+    cpp_ifndef
+    cpp_include
+    cpp_line
+    cpp_pragma
+    c99_pragma
+    xxxxx
 >;

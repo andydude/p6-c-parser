@@ -6,4 +6,4 @@ class CAST::Op
     is CAST::Node
     does CAST::Children;
 
-has CAST::OpKind $.op;
+has CAST::OpKind::OpKind $.op;

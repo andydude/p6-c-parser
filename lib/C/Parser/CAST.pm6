@@ -47,6 +47,8 @@ enum ExpressionTag is export <
     alignof_type
     alignas_type
     alignas_expr
+    offsetof
+    index
     call
 >;
 

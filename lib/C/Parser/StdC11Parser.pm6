@@ -191,11 +191,11 @@ sub get_declarator_name(Match $decr --> Str) {
 }
 
 sub end_declaration(Any $decls, Any $inits) {
-    if @*CONTEXTS < 1 {
+    if @*CONTEXTS.elems < 1 {
        return;
     }
     my $context_was = @*CONTEXTS[*-1];
-    if context_is('struct') || context_is('union') {
+    while context_is('struct') || context_is('union') {
         pop_context();
     }
     my $context = @*CONTEXTS[*-1];
@@ -610,16 +610,15 @@ proto rule struct-or-union-specifier {*}
 rule struct-or-union-specifier:sym<decl> {
     :my $ctx;
     <struct-or-union>
-    <ident>?
+    [ <ident>?
     '{'
-    {push_context('strunion')}
     <struct-declaration-list>
-    '}'
+    '}' || {pop_context()} <!>]
 }
 rule struct-or-union-specifier:sym<spec> {
     #{ say "struct-or-union-specifier:sym<spec> 1"; }
     <struct-or-union>
-    [[<ident> <!before '{'>]
+    [ <ident> <!before '{'>
     || {pop_context()} <!>]
     #{ say "struct-or-union-specifier:sym<spec> 2"; }
     
@@ -731,11 +730,8 @@ rule declarator:sym<direct> {
 }
 
 rule direct-declarator {
-    #{ say "direct-declarator 1"; }
     <direct-declarator-first>
-    #{ say "direct-declarator 2"; }
     <direct-declarator-rest>*
-    #{ say "direct-declarator 3"; }
 }
 
 proto rule direct-declarator-first {*}
@@ -813,11 +809,22 @@ rule attribute-specifier { # GNU
 }
 
 proto rule assembly {*}
-rule assembly:sym<std> {
+rule assembly:sym<std> { # GNU
     <asm-keyword>
     '('
     <string-constant>
+    [':' <assembly-operand-list>]*
     ')'
+}
+
+rule assembly-operand-list {
+    <assembly-operand> [',' <assembly-operand>]*
+}
+
+rule assembly-operand {
+	['[' <ident> ']']? 
+	<string-literal> 
+	['(' <expression> ')']?
 }
 
 proto rule pointer {*}

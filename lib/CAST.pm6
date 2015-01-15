@@ -34,6 +34,8 @@ use CAST::FuncType;		# type ident # function     (CAST::Arg @children)
 # has kind, type, size, ident, specs
 
 use CAST::Children;
+use CAST::InitVar;
+use CAST::VarDecl;
 use CAST::TypeDef;		# has ($type )
 use CAST::FuncDef;		# ($type, @children)
 use CAST::Block;        # compare to QAST::Block

@@ -6,3 +6,13 @@ is CAST::Node
 does CAST::Type
 does CAST::Children;
 # has Spec @children
+
+method deionize($ident) {
+    return self.type;
+}
+
+method ionize($type) {
+    self.type = $type;
+
+    return Nil;
+}

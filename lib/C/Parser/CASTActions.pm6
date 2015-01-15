@@ -176,10 +176,10 @@ method postfix-expression-rest:sym«->»($/)  {
     );
 }
 method postfix-expression-rest:sym<++>($/)  {
-    make ExpressionTag::post_increment;
+    make ExpressionTag::postinc;
 }
 method postfix-expression-rest:sym<-->($/)  {
-    make ExpressionTag::post_decrement;
+    make ExpressionTag::postdec;
 }
 
 # unary
@@ -192,7 +192,7 @@ method unary-expression:sym<postfix>($/) {
 method unary-expression:sym<++>($/) {
     #say "pre_increment: " ~ $<unary-expression>.ast.perl;
     make OpExpression.new(
-        tag => ExpressionTag::pre_increment,
+        tag => ExpressionTag::preinc,
         args => [$<unary-expression>.ast]
     );
 }
@@ -200,7 +200,7 @@ method unary-expression:sym<++>($/) {
 method unary-expression:sym<-->($/) {
     #say "pre_decrement: " ~ $<unary-expression>.ast.perl;
     make OpExpression.new(
-        tag => ExpressionTag::pre_increment,
+        tag => ExpressionTag::predec,
         args => [$<unary-expression>.ast]
     );
 }
@@ -260,7 +260,8 @@ sub binop_from_lassoc(@operators, @operands) {
         if $operator.WHAT.perl ne 'Match' {
             die "expected operator to be of type `Match`";
         }
-        my $tag = C::Parser::CAST::expr_tag_from_str($operator<sym>.Str);
+        #my $tag = C::Parser::CAST::expr_tag_from_str($operator<sym>.Str);
+        my $tag = $operator.ast;
         $ast = OpExpression.new(
             tag => $tag,
             args => [$ast, $operand]
@@ -437,8 +438,8 @@ method constant-expression($/) {
 # SS 6.7
 method declaration:sym<declaration>($/) {
     make Declaration.new(
-        modifiers => $<declaration-specifiers>.ast,
-        inits => $<init-declarator-list>.ast
+        specs => map {$_.ast}, @<declaration-specifiers>,
+        inits => map {$_.ast}, @<init-declarator-list>
     )
 }
 method declaration:sym<static_assert>($/) { # C11
@@ -446,7 +447,9 @@ method declaration:sym<static_assert>($/) { # C11
 }
 
 method declaration-specifiers($/) {
-    make map {$_.ast}, @<declaration-specifier>;
+    make DirectType.new(
+        specs => map {$_.ast}, @<declaration-specifier>
+    );
 }
 
 
@@ -472,8 +475,6 @@ method init-declarator-list($/) {
     make $declarator.ast;
 }
 method init-declarator($/) {
-    #say $<declarator>.ast.perl;
-    #say $<initializer>.ast.perl;
     my $decl = $<declarator> ?? $<declarator>.ast !! Declarator.new();
     my $init = $<initializer> ?? $<initializer>.ast !! Initializer.new();
     make InitDeclarator.new(:$decl, :$init);
@@ -525,6 +526,14 @@ method type-specifier:sym<typedef-name>($/)    {
     make $<typedef-name>.ast;
 }
 
+method struct-or-union-specifier:sym<decl>($/) {
+    #$<struct-declaration-list>.ast;
+    make $<ident>.ast;
+}
+method struct-or-union-specifier:sym<spec>($/) {
+    make $<ident>.ast;
+}
+
 # SS 6.7.2.1
 # SS 6.7.2.2
 # SS 6.7.2.4
@@ -554,7 +563,14 @@ method alignment-specifier:sym<constant>($/) {
 # SS 6.7.6
 method declarator:sym<direct>($/) {
     # TODO
-    make $<direct-declarator>.ast;
+    my $ast = $<direct-declarator>.ast;
+    for @<pointer> -> $pointer {
+        $ast = PointerDeclarator.new(
+            quals => $pointer.ast,
+            direct => $ast
+        );
+    }
+    make $ast;
 }
 
 method direct-declarator($/) {
@@ -609,11 +625,17 @@ method pointer:sym<pointer>($/) {
     make PointerDeclarator.new(:@quals);
 }
 
+method pointer:sym<block>($/) {
+    my @quals = map {$_.ast}, @<type-qualifier-list>;
+    make PointerDeclarator.new(:@quals);
+}
+
 method type-qualifier-list($/) {
     make map {$_.ast}, @<type-qualifier>
 }
 
 method parameter-type-list:sym<std>($/) {
+    # TODO: check for ellipsis
     make $<parameter-list>.ast
 }
 
@@ -630,7 +652,6 @@ method parameter-declaration:sym<declarator>($/) {
 method parameter-declaration:sym<abstract>($/) {
     make ParameterDeclaration.new(
         decls => map {$_.ast}, @<declaration-specifiers>
-#        decr => $<abstract-declarator>.ast
     )
 }
 
@@ -841,12 +862,15 @@ method external-declaration:sym<declaration>($/) {
 }
 
 # SS 6.9.1
+
+method declaration-list($/) {
+    make map {$_.ast}, @<declaration>;
+}
+
 method function-definition:sym<std>($/) {
-    my @modifiers = map {$_.ast}, @<declaration-specifiers>;
+    my @specs = map {$_.ast}, @<declaration-specifiers>;
     my @ancients = map {$_.ast}, @<declaration-list>;
     my $head = $<declarator>.ast;
     my $body = $<compound-statement>.ast;
-    make FunctionDeclaration.new(
-        :@modifiers, :$head,
-        :@ancients, :$body);
+    make FunctionDeclaration.new(:@specs, :$head, :@ancients, :$body);
 }

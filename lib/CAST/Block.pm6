@@ -1,3 +1,4 @@
 use v6;
 use CAST::Node;
-class CAST::Block is CAST::Node;
+use CAST::Children;
+class CAST::Block is CAST::Node does CAST::Children;
