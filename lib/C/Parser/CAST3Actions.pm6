@@ -1,40 +1,31 @@
 use v6;
-use C::AST;
-class C::Parser::CAST2Actions;
+use C::AST3;
+use C::AST3::Ops;
+class C::Parser::CAST3Actions;
 
-#sub new_init_declarator($decr, @inits) {
-#    C::AST::InitVar.new()
-#}
-sub new_init_declarator($decr, @inits) {
-    my @children = @inits;
-    @children.unshift($decr);
-    C::AST::Op.new(op => C::AST::OpKind::OpKind::init_declarator, children => @children)
-}
-
-
-    
 method TOP($/) {
     make $/.values.[0].ast;
 }
 
 method ident($/) {
-    make $<name>.Str;
+    my Str $name = $<name>.Str;
+    make C::AST3::Name.new(:$name);
 }
 
 method integer-constant($/) {
     my Int $value = Int(~$/);
-    make C::AST::IntVal.new(:$value);
+    make C::AST3::IntVal.new(:$value);
 }
 method floating-constant($/) {
     my Num $value = Num(~$/);
-    make C::AST::NumVal.new(:$value);
+    make C::AST3::NumVal.new(:$value);
 }
-method enumeration-constant($/) {
-    # TODO, both identifier + value
-    my Str $ident = ~$/;
-    my Str $value = ~$/;
-    make C::AST::EnumVal.new(:$value, :$ident);
-}
+#method enumeration-constant($/) {
+#    # TODO, both identifier + value
+#    my Str $ident = ~$/;
+#    my Str $value = ~$/;
+#    make C::AST3::Enumerator.new(:$value, :$ident);
+#}
 
 method character-constant:sym<quote>($/) {
     make $<c-char-sequence>.ast;
@@ -51,7 +42,7 @@ method character-constant:sym<U>($/) {
 
 method c-char-sequence($/) {
     my $value = $<c-char>.Str;
-    make C::AST::CharVal.new(:$value);
+    make C::AST3::CharVal.new(:$value);
 }
 
 method string-literal:sym<quote>($/) { make $<s-char-sequence>.ast }
@@ -62,12 +53,12 @@ method string-literal:sym<quote>($/) { make $<s-char-sequence>.ast }
 
 method s-char-sequence($/) {
     my $value = $<s-char>.Str;
-    make C::AST::StrVal.new(:$value);
+    make C::AST3::StrVal.new(:$value);
 }
 
 method string-constant($/) {
     my $value = (map {$_.ast.value}, @<string-literal>).join;
-    make C::AST::StrVal.new(:$value);
+    make C::AST3::StrVal.new(:$value);
 }
 
 # SS 6.4.3
@@ -90,8 +81,7 @@ method constant:sym<character>($/) {
 }
 
 method primary-expression:sym<identifier>($/) {
-    #say "Ident: " ~ $<ident>.perl;
-    make C::AST::Var.new(ident => $<ident>.ast);
+    make $<ident>.ast;
 }
 
 method primary-expression:sym<constant>($/) {
@@ -150,42 +140,42 @@ method postfix-expression-first:sym<primary>($/) {
 }
 
 method postfix-expression-first:sym<initializer>($/) {
-    my $kind = C::AST::OpKind::OpKind::initializer;
+    my $op = OpKind::initializer;
     my $children = $<initializer-list>.ast;
     $children.unshift($<type-name>.ast);
-    make C::AST::Op.new(:$kind, :$children);
+    make C::AST3::Op.new(:$op, :$children);
 }
 
 method postfix-expression-rest:sym<[ ]>($/) {
-    make C::AST::Op.new(
-        kind => C::AST::OpKind::OpKind::array_selector,
-        children => [$<expression>.ast]
+    make C::AST3::Op.new(
+        op => OpKind::array_selector,
+        children => $<expression>.ast
     );
 }
 method postfix-expression-rest:sym<( )>($/) {
-    make C::AST::Op.new(
-        kind => C::AST::OpKind::OpKind::call,
+    make C::AST3::Op.new(
+        op => OpKind::call,
         children => @<argument-expression-list>
     );
 }
 
 method postfix-expression-rest:sym<.>($/)   {
-    make C::AST::Op.new(
-        kind => C::AST::OpKind::OpKind::direct_selector,
+    make C::AST3::Op.new(
+        op => OpKind::direct_selector,
         children => $<ident>.ast
     );
 }
 method postfix-expression-rest:sym«->»($/)  {
-    make C::AST::Op.new(
-        kind => C::AST::OpKind::OpKind::indirect_selector,
+    make C::AST3::Op.new(
+        op => OpKind::indirect_selector,
         children => $<ident>.ast
     );
 }
 method postfix-expression-rest:sym<++>($/)  {
-    make C::AST::OpKind::OpKind::postinc;
+    make OpKind::postinc;
 }
 method postfix-expression-rest:sym<-->($/)  {
-    make C::AST::OpKind::OpKind::postdec;
+    make OpKind::postdec;
 }
 
 # unary
@@ -197,22 +187,22 @@ method unary-expression:sym<postfix>($/) {
 
 method unary-expression:sym<++>($/) {
     #say "pre_increment: " ~ $<unary-expression>.ast.perl;
-    make C::AST::Op.new(C::AST::OpKind::OpKind::preinc,
-        children => [$<unary-expression>.ast]
+    make C::AST3::Op.new(OpKind::preinc,
+        children => $<unary-expression>.ast
     );
 }
 
 method unary-expression:sym<-->($/) {
     #say "pre_decrement: " ~ $<unary-expression>.ast.perl;
-    make C::AST::Op.new(C::AST::OpKind::OpKind::predec,
-        children => [$<unary-expression>.ast]
+    make C::AST3::Op.new(OpKind::predec,
+        children => $<unary-expression>.ast
     );
 }
 
 method unary-expression:sym<unary-cast>($/) {
     #say "cast: " ~ $<cast-expression>.ast.perl;
-    make C::AST::Op.new($<unary-operator>.ast,
-        children => [$<cast-expression>.ast]
+    make C::AST3::Op.new($<unary-operator>.ast,
+        children => $<cast-expression>.ast
     );
 }
 
@@ -227,22 +217,22 @@ method unary-expression:sym<unary-cast>($/) {
 #}
 
 method unary-operator:sym<&> {
-    make C::AST::OpKind::OpKind::ref;
+    make OpKind::ref;
 }
 method unary-operator:sym<*> {
-    make C::AST::OpKind::OpKind::deref;
+    make OpKind::deref;
 }
 method unary-operator:sym<+> {
-    make C::AST::OpKind::OpKind::prepos;
+    make OpKind::prepos;
 }
 method unary-operator:sym<-> {
-    make C::AST::OpKind::OpKind::preneg;
+    make OpKind::preneg;
 }
 method unary-operator:sym<~> {
-    make C::AST::OpKind::OpKind::bitnot;
+    make OpKind::bitnot;
 }
 method unary-operator:sym<!> {
-    make C::AST::OpKind::OpKind::not;
+    make OpKind::not;
 }
 
 
@@ -250,10 +240,10 @@ method unary-operator:sym<!> {
 method cast-expression($/) {
     my $ast = $<unary-expression>.ast;
     for @<cast-operator> -> $operator {
-        my $kind = $operator.ast;
-        $ast = C::AST::Op.new(
-            kind => $kind,
-            children => [$ast])
+        my $op = $operator.ast;
+        $ast = C::AST3::Op.new(
+            op => $op,
+            children => ($ast,))
     }
     make $ast;
 }
@@ -266,7 +256,7 @@ sub binop_from_lassoc(@operators, @operands) {
         }
         my $op = $operator.ast;
         my @children = ($ast, $operand.ast);
-        $ast = C::AST::Op.new(:$op, :@children);
+        $ast = C::AST3::Op.new(:$op, :@children);
     };
     return $ast;
 }
@@ -281,13 +271,13 @@ method multiplicative-expression($/) {
     make binop_from_lassoc(@<multiplicative-operator>, @<operands>);
 }
 method multiplicative-operator:sym<*>($/) {
-    make C::AST::OpKind::OpKind::mul;
+    make OpKind::mul;
 }
 method multiplicative-operator:sym</>($/) {
-    make C::AST::OpKind::OpKind::div;
+    make OpKind::div;
 }
 method multiplicative-operator:sym<%>($/) {
-    make C::AST::OpKind::OpKind::mod;
+    make OpKind::mod;
 }
 
 # SS 6.5.6
@@ -295,10 +285,10 @@ method additive-expression($/) {
     make binop_from_lassoc(@<additive-operator>, @<operands>);
 }
 method additive-operator:sym<+>($/) { 
-    make C::AST::OpKind::OpKind::add;
+    make OpKind::add;
 }
 method additive-operator:sym<->($/) { make 
-    make C::AST::OpKind::OpKind::sub;
+    make OpKind::sub;
 }
 
 # SS 6.5.7
@@ -306,10 +296,10 @@ method shift-expression($/) {
     make binop_from_lassoc(@<shift-operator>, @<operands>);
 }
 method shift-operator:sym«<<»($/) {
-    make C::AST::OpKind::OpKind::bitshiftl;
+    make OpKind::bitshiftl;
 }
 method shift-operator:sym«>>»($/) {
-    make C::AST::OpKind::OpKind::bitshiftr;
+    make OpKind::bitshiftr;
 }
 
 # SS 6.5.8
@@ -317,16 +307,16 @@ method relational-expression($/) {
     make binop_from_lassoc(@<relational-operator>, @<operands>);
 }
 method relational-operator:sym«<»($/) {
-    make C::AST::OpKind::OpKind::islt;
+    make OpKind::islt;
 }
 method relational-operator:sym«>»($/) {
-    make C::AST::OpKind::OpKind::isgt;
+    make OpKind::isgt;
 }
 method relational-operator:sym«<=»($/) {
-    make C::AST::OpKind::OpKind::isle;
+    make OpKind::isle;
 }
 method relational-operator:sym«>=»($/) {
-    make C::AST::OpKind::OpKind::isge;
+    make OpKind::isge;
 }
 
 # SS 6.5.9
@@ -334,10 +324,10 @@ method equality-expression($/) {
     make binop_from_lassoc(@<equality-operator>, @<operands>);
 }
 method equality-operator:sym<==>($/) {
-    make C::AST::OpKind::OpKind::iseq;
+    make OpKind::iseq;
 }
 method equality-operator:sym<!=>($/) {
-    make C::AST::OpKind::OpKind::isne;
+    make OpKind::isne;
 }
 
 # SS 6.5.10
@@ -345,7 +335,7 @@ method and-expression($/)  {
     make binop_from_lassoc(@<and-operator>, @<operands>);
 }
 method and-operator:sym<&>($/) {
-    make C::AST::OpKind::OpKind::bitand;
+    make OpKind::bitand;
 }
 
 # SS 6.5.11
@@ -353,7 +343,7 @@ method exclusive-or-expression($/) {
     make binop_from_lassoc(@<exclusive-or-operator>, @<operands>);
 }
 method exclusive-or-operator:sym<^>($/) {
-    make C::AST::OpKind::OpKind::bitxor;
+    make OpKind::bitxor;
 }
 
 # SS 6.5.12
@@ -361,7 +351,7 @@ method inclusive-or-expression($/) {
     make binop_from_lassoc(@<inclusive-or-operator>, @<operands>);
 }
 method inclusive-or-operator:sym<|>($/) {
-    make C::AST::OpKind::OpKind::bitor;
+    make OpKind::bitor;
 }
 
 # SS 6.5.13
@@ -369,7 +359,7 @@ method logical-and-expression($/) {
     make binop_from_lassoc(@<logical-and-operator>, @<operands>);
 }
 method logical-and-operator:sym<&&>($/) {
-    make C::AST::OpKind::OpKind::and;
+    make OpKind::and;
 }
 
 # SS 6.5.14
@@ -377,7 +367,7 @@ method logical-or-expression($/) {
     make binop_from_lassoc(@<logical-or-operator>, @<operands>);
 }
 method logical-or-operator:sym<||>($/) {
-    make C::AST::OpKind::OpKind::or;
+    make OpKind::or;
 }
 
 # SS 6.5.15
@@ -391,37 +381,37 @@ method assignment-expression($/) {
     make binop_from_rassoc(@<assignment-operator>, @<operands>);
 }
 method assignment-operator:sym<=>($/)    {
-    make C::AST::OpKind::OpKind::assign;
+    make OpKind::assign;
 }
 method assignment-operator:sym<*=>($/)   {
-    make C::AST::OpKind::OpKind::assign_mul;
+    make OpKind::assign_mul;
 }
 method assignment-operator:sym</=>($/)   {
-    make C::AST::OpKind::OpKind::assign_div;
+    make OpKind::assign_div;
 }
 method assignment-operator:sym<%=>($/)   {
-    make C::AST::OpKind::OpKind::assign_mod;
+    make OpKind::assign_mod;
 }
 method assignment-operator:sym<+=>($/)   {
-    make C::AST::OpKind::OpKind::assign_add;
+    make OpKind::assign_add;
 }
 method assignment-operator:sym<-=>($/)   {
-    make C::AST::OpKind::OpKind::assign_sub;
+    make OpKind::assign_sub;
 }
 method assignment-operator:sym«<<=»($/)  {
-    make C::AST::OpKind::OpKind::assign_bitshiftl;
+    make OpKind::assign_bitshiftl;
 }
 method assignment-operator:sym«>>=»($/)  {
-    make C::AST::OpKind::OpKind::assign_bitshiftr;
+    make OpKind::assign_bitshiftr;
 }
 method assignment-operator:sym<&=>($/)   {
-    make C::AST::OpKind::OpKind::assign_bitand;
+    make OpKind::assign_bitand;
 }
 method assignment-operator:sym<^=>($/)   {
-    make C::AST::OpKind::OpKind::assign_bitxor;
+    make OpKind::assign_bitxor;
 }
 method assignment-operator:sym<|=>($/)   {
-    make C::AST::OpKind::OpKind::assign_bitor;
+    make OpKind::assign_bitor;
 }
 
 # SS 6.5.17
@@ -440,15 +430,11 @@ method constant-expression($/) {
 method declaration:sym<declaration>($/) {
     # determine if it's a typedef
     # determine the name
-    #make Var.new(
-    #    ident
-    #    type
-    #)
-    my $op = C::AST::OpKind::OpKind::declaration;
+
     if $<init-declarator-list> {
+        my $type = $<declaration-specifiers>.ast;
         my @children = $<init-declarator-list>.ast;
-        @children.unshift($<declaration-specifiers>.ast);
-        make C::AST::Op.new(:$op, :@children);
+        make C::AST3::Decl.new(:$type, :@children);
     }
     else {
         make $<declaration-specifiers>.ast;
@@ -459,10 +445,8 @@ method declaration:sym<static_assert>($/) { # C11
 }
 
 method declaration-specifiers($/) {
-    my $op = C::AST::OpKind::OpKind::direct_type;
     my @children = map {$_.ast}, @<declaration-specifier>;
-    #make C::AST::DirectType.new(:@children);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Specs.new(:@children);
 }
 
 
@@ -488,16 +472,14 @@ method init-declarator-list($/) {
 }
 
 method init-declarator($/) {
-    my $decl = $<declarator> ?? $<declarator>.ast !! Nil;
-    my $init = $<initializer> ?? $<initializer>.ast !! Nil;
+    my $type = $<declarator> ?? $<declarator>.ast !! Nil;
+    my $value = $<initializer> ?? $<initializer>.ast !! Nil;
 
-    if $decl && $init {
-        my $op = C::AST::OpKind::OpKind::init_declarator;
-        my @children = ($decl, $init);
-        make C::AST::Op.new(:$op, :@children);
+    if $type && $value {
+        make C::AST3::Init.new(:$type, :$value);
     }
-    elsif $decl {
-        make $decl;
+    elsif $type {
+        make $type;
     }
     else {
         make Nil;
@@ -506,36 +488,36 @@ method init-declarator($/) {
 
 # SS 6.7.1
 method storage-class-specifier:sym<typedef>($/) {
-    make C::AST::TypeSpec::TypeSpec::c_typedef;
+    make Spec::typedef;
 }
 method storage-class-specifier:sym<extern>($/) {
-    make C::AST::TypeSpec::TypeSpec::c_extern;
+    make Spec::extern;
 }
 method storage-class-specifier:sym<static>($/) {
-    make C::AST::TypeSpec::TypeSpec::c_static;
+    make Spec::static;
 }
 method storage-class-specifier:sym<_Thread_local>($/) {
-    make C::AST::TypeSpec::TypeSpec::c_thread_local;
+    make Spec::thread_local;
 }
 method storage-class-specifier:sym<auto>($/) {
-    make C::AST::TypeSpec::TypeSpec::c_auto;
+    make Spec::auto;
 }
 method storage-class-specifier:sym<register>($/) {
-    make C::AST::TypeSpec::TypeSpec::c_register;
+    make Spec::register;
 }
 
 # SS 6.7.2
-method type-specifier:sym<void>($/)     { make C::AST::TypeSpec::TypeSpec::c_void }
-method type-specifier:sym<char>($/)     { make C::AST::TypeSpec::TypeSpec::c_char }
-method type-specifier:sym<short>($/)    { make C::AST::TypeSpec::TypeSpec::c_short }
-method type-specifier:sym<int>($/)      { make C::AST::TypeSpec::TypeSpec::c_int }
-method type-specifier:sym<long>($/)     { make C::AST::TypeSpec::TypeSpec::c_long }
-method type-specifier:sym<float>($/)    { make C::AST::TypeSpec::TypeSpec::c_float }
-method type-specifier:sym<double>($/)   { make C::AST::TypeSpec::TypeSpec::c_double }
-method type-specifier:sym<signed>($/)   { make C::AST::TypeSpec::TypeSpec::c_signed }
-method type-specifier:sym<unsigned>($/) { make C::AST::TypeSpec::TypeSpec::c_unsigned }
-method type-specifier:sym<_Bool>($/)    { make C::AST::TypeSpec::TypeSpec::c_bool }
-method type-specifier:sym<_Complex>($/) { make C::AST::TypeSpec::TypeSpec::c_complex }
+method type-specifier:sym<void>($/)     { make Spec::void }
+method type-specifier:sym<char>($/)     { make Spec::char }
+method type-specifier:sym<short>($/)    { make Spec::short }
+method type-specifier:sym<int>($/)      { make Spec::int }
+method type-specifier:sym<long>($/)     { make Spec::long }
+method type-specifier:sym<float>($/)    { make Spec::float }
+method type-specifier:sym<double>($/)   { make Spec::double }
+method type-specifier:sym<signed>($/)   { make Spec::signed }
+method type-specifier:sym<unsigned>($/) { make Spec::unsigned }
+method type-specifier:sym<_Bool>($/)    { make Spec::bool }
+method type-specifier:sym<_Complex>($/) { make Spec::complex }
 
 method type-specifier:sym<atomic-type>($/) {
     make $<atomic-type-specifier>.ast;
@@ -557,25 +539,25 @@ method type-specifier:sym<typedef-name>($/)    {
 
 # SS 6.7.3
 proto rule type-qualifier {*}
-method type-qualifier:sym<const>($/)    { make C::AST::TypeSpec::TypeSpec::c_const }
-method type-qualifier:sym<restrict>($/) { make C::AST::TypeSpec::TypeSpec::c_restrict }
-method type-qualifier:sym<volatile>($/) { make C::AST::TypeSpec::TypeSpec::c_volatile }
-method type-qualifier:sym<_Atomic>($/)  { make C::AST::TypeSpec::TypeSpec::c_atomic }
+method type-qualifier:sym<const>($/)    { make Spec::const }
+method type-qualifier:sym<restrict>($/) { make Spec::restrict }
+method type-qualifier:sym<volatile>($/) { make Spec::volatile }
+method type-qualifier:sym<_Atomic>($/)  { make Spec::atomic }
 
 # SS 6.7.4
-method function-specifier:sym<inline>($/)    { make C::AST::TypeSpec::TypeSpec::c_inline }
-method function-specifier:sym<_Noreturn>($/) { make C::AST::TypeSpec::TypeSpec::c_noreturn }
+method function-specifier:sym<inline>($/)    { make Spec::inline }
+method function-specifier:sym<_Noreturn>($/) { make Spec::noreturn }
 
 # SS 6.7.5
 method alignment-specifier:sym<type-name>($/) {
-    my $op = C::AST::OpKind::OpKind::alignas_type;
+    my $op = TyKind::alignas_type;
     my @children = ($<type-name>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::TypeOp.new(:$op, :@children);
 }
 method alignment-specifier:sym<constant>($/) {
-    my $op = C::AST::OpKind::OpKind::alignas_expr;
+    my $op = TyKind::alignas_expr;
     my @children = ($<type-name>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::TypeOp.new(:$op, :@children);
 }
 
 
@@ -586,22 +568,22 @@ method declarator:sym<direct>($/) {
     # TODO
     my $ast = $<direct-declarator>.ast;
     for @<pointer> -> $pointer {
-        my $op = C::AST::OpKind::OpKind::pointer_declarator;
+        my $op = TyKind::pointer_declarator;
         my @children = ($ast, $pointer.ast);
-        $ast = C::AST::Op.new(:$op, :@children);
+        $ast = C::AST3::TypeOp.new(:$op, :@children);
     }
     make $ast;
 }
 
 method direct-declarator($/) {
-    my $op = C::AST::OpKind::OpKind::direct_declarator;
+    my $op = TyKind::direct_declarator;
     my @children = map {$_.ast}, @<direct-declarator-rest>;
     @children.unshift($<direct-declarator-first>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::TypeOp.new(:$op, :@children);
 }
 
 method direct-declarator-first:sym<identifier>($/) {
-    make C::AST::Var.new(ident => $<ident>.ast);
+    make $<ident>.ast;
 }
 
 method direct-declarator-first:sym<declarator>($/) {
@@ -642,13 +624,15 @@ method direct-declarator-rest:sym<p-identifier-list>($/) {
 }
 
 method pointer:sym<pointer>($/) {
-    my @children = $<type-qualifier-list> ?? $<type-qualifier-list>.ast !! ();
-    make C::AST::PtrType.new(:@children);
+    make $<type-qualifier-list>.ast;
+    #my @children = $<type-qualifier-list> ?? $<type-qualifier-list>.ast !! ();
+    #make C::AST3::PtrType.new(:@children);
 }
 
 method pointer:sym<block>($/) {
-    my @children = $<type-qualifier-list>.ast;
-    make C::AST::PtrType.new(:@children);
+    make $<type-qualifier-list>.ast;
+    #my @children = $<type-qualifier-list>.ast;
+    #make C::AST3::PtrType.new(:@children);
 }
 
 method type-qualifier-list($/) {
@@ -667,13 +651,13 @@ method parameter-list($/) {
 method parameter-declaration:sym<declarator>($/) {
     my $type = $<declaration-specifiers>.ast;
     my $decr = $<declarator>.ast;
-    #make C::AST::Arg.new(:$type);
-    make C::AST::Op.new(op => C::AST::OpKind::OpKind::parameter_declaration, children => ($type, $decr));
+    #make C::AST3::Arg.new(:$type);
+    make C::AST3::Op.new(op => OpKind::parameter_declaration, children => ($type, $decr));
 }
 method parameter-declaration:sym<abstract>($/) {
     my $type = $<declaration-specifiers>.ast;
-    make C::AST::Arg.new(:$type);
-    make C::AST::Op.new(op => C::AST::OpKind::OpKind::parameter_declaration, children => ($type));
+    make C::AST3::Arg.new(:$type);
+    make C::AST3::Op.new(op => OpKind::parameter_declaration, children => ($type));
 }
 
 method identifier-list($/) { make map {$_.ast}, @<ident> }
@@ -682,7 +666,7 @@ method identifier-list($/) { make map {$_.ast}, @<ident> }
 method type-name($/) {
     my @children = $<specifier-qualifier-list>.ast;
     my $decr = $<abstract-declarator>.ast;
-    make C::AST::RefType.new(@children);
+    make C::AST3::RefType.new(@children);
 }
 method abstract-declarator:sym<pointer>($/)  {
     make $<pointer>.ast;
@@ -696,7 +680,7 @@ method direct-abstract-declarator($/) {
     #make Arg.new(
     #    first => $<direct-abstract-declarator-first>,
     #        rest => @<direct-abstract-declarator-rest>)
-    make C::AST::Var.new()
+    make C::AST3::Var.new()
 }
 method direct-abstract-declarator-first:sym<abstract>($/)  {
     make $<abstract-declarator>.ast;
@@ -797,19 +781,19 @@ method statement:sym<jump>($/) {
 
 # SS 6.8.1
 method labeled-statement:sym<identifier>($/) {
-    my $op = C::AST::OpKind::OpKind::labeled_stmt;
+    my $op = OpKind::labeled_stmt;
     my @children = ($<ident>.ast, $<statement>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Op.new(:$op, :@children);
 }
 method labeled-statement:sym<case>($/) {
-    my $op = C::AST::OpKind::OpKind::switch_case;
+    my $op = OpKind::switch_case;
     my @children = ($<constant-expression>.ast, $<statement>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Op.new(:$op, :@children);
 }
 method labeled-statement:sym<default>($/) {
-    my $op = C::AST::OpKind::OpKind::switch_default;
+    my $op = OpKind::switch_default;
     my @children = ($<ident>.ast, $<statement>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Op.new(:$op, :@children);
 }
 
 # SS 6.8.2
@@ -818,7 +802,7 @@ method compound-statement($/) {
 }
 method block-item-list($/) {
     my @children = map {$_.ast}, @<block-item>;
-    make C::AST::Block.new(:@children);
+    make C::AST3::Block.new(:@children);
 }
 method block-item:sym<declaration>($/) {
     make $<declaration>.ast;
@@ -834,51 +818,51 @@ method expression-statement($/) {
 
 # SS 6.8.4
 method selection-statement:sym<if>($/) {
-    my $op = C::AST::OpKind::OpKind::if_stmt;
+    my $op = OpKind::if_stmt;
     my @children = ($<expression>.ast, $<then_statement>.ast, $<else_statement>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Op.new(:$op, :@children);
 }
     
 method selection-statement:sym<switch>($/) {
-    my $op = C::AST::OpKind::OpKind::switch_stmt;
+    my $op = OpKind::switch_stmt;
     my @children = map {$_.ast}, @<statement>;
     @children.unshift($<expression>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Op.new(:$op, :@children);
 }
 
 # SS 6.8.5
 
 # SS 6.8.6
 method jump-statement:sym<goto>($/) {
-    my $op = C::AST::OpKind::OpKind::goto_stmt;
+    my $op = OpKind::goto_stmt;
     my @children = ($<ident>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Op.new(:$op, :@children);
 }
 method jump-statement:sym<continue>($/) {
-    my $op = C::AST::OpKind::OpKind::continue_stmt;
-    my @children = ();
-    make C::AST::Op.new(:$op, :@children);
+    my $op = OpKind::continue_stmt;
+    make C::AST3::Op.new(:$op);
 }
 method jump-statement:sym<break>($/) {
-    my $op = C::AST::OpKind::OpKind::break_stmt;
-    my @children = ();
-    make C::AST::Op.new(:$op, :@children);
+    my $op = OpKind::break_stmt;
+    make C::AST3::Op.new(:$op);
 }
 method jump-statement:sym<return>($/) {
-    my $op = C::AST::OpKind::OpKind::return_stmt;
+    my $op = OpKind::return_stmt;
     my @children = ($<expression>.ast);
-    make C::AST::Op.new(:$op, :@children);
+    make C::AST3::Op.new(:$op, :@children);
 }
 
 # SS 6.9
+
 method translation-unit($/) {
     my @children = map {$_.ast}, @<external-declaration>;
-    make C::AST::TransUnit.new(:@children);
+    make C::AST3::TransUnit.new(:@children);
 }
 
 method external-declaration:sym<function-definition>($/) {
     make $<function-definition>.ast;
 }
+
 method external-declaration:sym<declaration>($/) {
     make $<declaration>.ast;
 }
@@ -890,9 +874,20 @@ method declaration-list($/) {
 }
 
 method function-definition:sym<std>($/) {
-    my @specs = map {$_.ast}, @<declaration-specifiers>;
-    my @ancients = map {$_.ast}, @<declaration-list>;
-    my $head = $<declarator>.ast;
-    my @children = [$<compound-statement>.ast];
-    make C::AST::FuncDef.new(:@specs, :$head, :@ancients, :@children);
+    my @specs = $<declaration-specifiers>.ast;
+    my @ancients = $<declaration-list>.ast;
+
+    # TODO synthesize ancients
+    # TODO synthesize type
+
+    my $op = TypeOpKind::function_type;
+    my @children = @ancients;
+    @children.push(C::AST3::Specs.new(children => @specs));
+    @children.push($<declarator>.ast);
+    
+    # TODO analyze name
+    
+    make C::AST3::Init.new(
+        type => C::AST3::TypeOp.new(:$op, :@children),
+        value => $<compound-statement>.ast);
 }
