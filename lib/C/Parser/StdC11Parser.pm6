@@ -186,7 +186,9 @@ sub context_is(Str $ctx --> Bool) {
 
 sub get_declarator_name(Match $decr --> Str) {
     my Match $ddecr1 = $decr<direct-declarator><direct-declarator-first>;
-    my Str $name = $ddecr1<declarator> ?? get_declarator_name($ddecr1<declarator>) !! $ddecr1<ident><name>.Str;
+    my Str $name = $ddecr1<declarator>
+        ?? get_declarator_name($ddecr1<declarator>)
+        !! $ddecr1<ident><name>.Str;
     return $name;
 }
 
@@ -672,7 +674,7 @@ rule struct-declarator:sym<bit> {
 
 # SS 6.7.2.2
 proto rule enum-specifier {*}
-rule enum-specifier:sym<decl> {
+rule enum-specifier:sym<decl> {c
     <enum-keyword> <ident>?
     '{'
     {push_context('enum')}

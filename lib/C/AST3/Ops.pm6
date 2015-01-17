@@ -90,7 +90,9 @@ enum OpKind is export <
 >;
 
 enum TyKind is export <
+    attribute 
     apple_block_declarator
+    apple_block_type
     apple_block_expr
     apple_block_var
     array_declarator
@@ -103,6 +105,7 @@ enum TyKind is export <
     enum_decl
     enum_type
     enumerator
+    fixed_length_array_designator
     fixed_length_array_type
     function_declaration
     function_declarator
@@ -117,15 +120,17 @@ enum TyKind is export <
     struct_declarator
     struct_designator
     struct_type
+    static_assert_declaration
     typeof_expr
     union_decl
     union_type
+    variable_length_array_designator
     variable_length_array_type
+    variably_modified_array_designator
     variably_modified_array_type
 >;
 
 enum Spec is export < 
-    attribute 
     auto
     char
     const

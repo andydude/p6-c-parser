@@ -60,7 +60,7 @@ class Init is Arg {
 }
 
 class Decl is Arg {
-    has Init @.children;
+    has Type @.children; # usually Init
 }
 
 class TransUnit is Node {
