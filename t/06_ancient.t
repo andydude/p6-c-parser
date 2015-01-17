@@ -2,7 +2,8 @@
 use v6;
 use Test;
 plan 1;
-use C::Parser::StdC11Parser;
+use C::AST;
+use C::Parser;
 
 our $source = q<<<
     int printf(const char *, ...);
@@ -16,6 +17,6 @@ our $source = q<<<
 >>>;
 
 {
-    my $match = C::Parser::StdC11Parser.parse($source);
-    isa_ok($match, Match, 'gives a Match');
+    my $match = C::Parser.parse($source);
+    isa_ok($match, C::AST::TransUnit, 'gives a C::AST::TransUnit');
 }

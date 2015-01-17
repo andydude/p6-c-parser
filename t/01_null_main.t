@@ -2,7 +2,7 @@
 use v6;
 use Test;
 plan 1;
-use C::Parser::StdC11Parser;
+use C::Parser::Grammar;
 
 our $source = q<<<
     int main() {
@@ -11,6 +11,6 @@ our $source = q<<<
 >>>;
 
 {
-    my $match = C::Parser::StdC11Parser.parse($source);
+    my $match = C::Parser::Grammar.parse($source);
     is($match.WHAT.perl, 'Match', 'gives a Match');
 }

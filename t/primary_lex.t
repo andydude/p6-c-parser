@@ -2,23 +2,23 @@
 use v6;
 use Test;
 plan 4;
-use C::Parser::StdC11Lexer;
+use C::Parser::Lexer;
 
 {
     my $source = q<<< char newline = '\n'; >>>;
-    my $ast = C::Parser::StdC11Lexer.parse($source);
+    my $ast = C::Parser::Lexer.parse($source);
     isa_ok $ast, Match, 'gives a Match';
 }
 
 {
     my $source = q<<< char *name = "world"; >>>;
-    my $ast = C::Parser::StdC11Lexer.parse($source);
+    my $ast = C::Parser::Lexer.parse($source);
     isa_ok $ast, Match, 'gives a Match';
 }
 
 {
     my $source = q<<< int number = 5; >>>;
-    my $ast = C::Parser::StdC11Lexer.parse($source);
+    my $ast = C::Parser::Lexer.parse($source);
     isa_ok $ast, Match, 'gives a Match';
 
     #my @tokens = $ast{'c-tokens'}{'c-token'};
@@ -33,6 +33,6 @@ use C::Parser::StdC11Lexer;
 
 {
     my $source = q<<< double pi64 = 3.14; >>>;
-    my $ast = C::Parser::StdC11Lexer.parse($source);
+    my $ast = C::Parser::Lexer.parse($source);
     isa_ok $ast, Match, 'gives a Match';
 }

@@ -1,11 +1,9 @@
 #!/usr/bin/env perl6
 use v6;
 use lib 'lib';
-use C::Parser::CASTActions;
-use C::Parser::CAST2Actions;
-use C::Parser::CAST3Actions;
-use C::Parser::StdC11Lexer;
-use C::Parser::StdC11Parser;
+use C::Parser::Actions;
+use C::Parser::Lexer;
+use C::Parser::Grammar;
 use C::Parser::Utils;
 
 sub MAIN (Str $input = "-",
@@ -18,7 +16,7 @@ sub MAIN (Str $input = "-",
     Bool :$verbose = False)
 {
     my Str $source = ($input eq "-") ?? slurp("/dev/stdin") !! slurp($input);
-    my $parser = $lexonly ?? C::Parser::StdC11Lexer !! C::Parser::StdC11Parser;
+    my $parser = $lexonly ?? C::Parser::Lexer !! C::Parser::Grammar;
     my $ast;
 
     #if $preproc {
@@ -32,16 +30,8 @@ sub MAIN (Str $input = "-",
         when "nil" {
             $ast = $parser.parse($source);
         }
-        when "cast3" {
-            my $actions = C::Parser::CAST3Actions.new();
-            $ast = $parser.parse($source, :$actions);
-        }
-        when "cast2" {
-            my $actions = C::Parser::CAST2Actions.new();
-            $ast = $parser.parse($source, :$actions);
-        }
         when "cast" {
-            my $actions = C::Parser::CASTActions.new();
+            my $actions = C::Parser::Actions.new();
             $ast = $parser.parse($source, :$actions);
         }
         default {
