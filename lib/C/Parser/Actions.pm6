@@ -780,7 +780,7 @@ method direct-abstract-declarator($/) {
     #make Arg.new(
     #    first => $<direct-abstract-declarator-first>,
     #        rest => @<direct-abstract-declarator-rest>)
-    make C::AST::Var.new()
+    make C::AST::Name.new("abstract?!?")
 }
 method direct-abstract-declarator-first:sym<abstract>($/)  {
     make $<abstract-declarator>.ast;
