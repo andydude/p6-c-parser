@@ -133,6 +133,8 @@ token thread-local-keyword  { '_Thread_local' || 'thread_local' }
 
 token asm-keyword  			{ '__asm__' || '__asm' || 'asm' }
 token attribute-keyword 	{ '__attribute__' }
+token block-keyword         { '__block' }
+token typeof-keyword        { '__typeof__' || 'typeof' }
 
 # SS 6.4.2.1
 

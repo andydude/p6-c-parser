@@ -510,6 +510,10 @@ rule constant-expression { <conditional-expression> }
 
 # SS 6.7
 proto rule declaration {*}
+rule declaration:sym<direct-typedef> {
+    'typedef' <declaration-specifiers> <ident> ';'
+}
+
 rule declaration:sym<declaration> {
     <declaration-specifiers> <init-declarator-list>? ';'
     {end_declaration($<declaration-specifiers>, $<init-declarator-list>)}
@@ -527,29 +531,19 @@ rule declaration-specifiers {
 # so we factor it out as <declaration-specifier>+ which means the same.
 proto rule declaration-specifier {*}
 rule declaration-specifier:sym<storage-class> {
-    #{ say "declaration-specifier:sym<storage-class> 1"; }
     <storage-class-specifier>
-    #{ say "declaration-specifier:sym<storage-class> 2"; }
 }
 rule declaration-specifier:sym<type-specifier> {
-    #{ say "declaration-specifier:sym<type-specifier> 1"; }
     <type-specifier>
-    #{ say "declaration-specifier:sym<type-specifier> 2"; }
 }
 rule declaration-specifier:sym<type-qualifier> {
-    #{ say "declaration-specifier:sym<type-qualifier> 1"; }
     <type-qualifier>
-    #{ say "declaration-specifier:sym<type-qualifier> 2"; }
 }
 rule declaration-specifier:sym<function> {
-    #{ say "declaration-specifier:sym<function> 1"; }
     <function-specifier>
-    #{ say "declaration-specifier:sym<function> 2"; }
 }
 rule declaration-specifier:sym<alignment> {
-    #{ say "declaration-specifier:sym<alignment> 1"; }
     <alignment-specifier>
-    #{ say "declaration-specifier:sym<alignment> 2"; }
 }
 rule declaration-specifier:sym<__attribute__> { # GNU
     <attribute-keyword>
@@ -601,7 +595,7 @@ rule type-specifier:sym<typedef-name>    {
 }
 
 rule type-specifier:sym<__typeof__> { # GNU
-    <sym>
+    <typeof-keyword>
     '('
     <expression>
     ')'
@@ -620,7 +614,7 @@ rule struct-or-union-specifier:sym<decl> {
 rule struct-or-union-specifier:sym<spec> {
     #{ say "struct-or-union-specifier:sym<spec> 1"; }
     <struct-or-union>
-    [ <ident> <!before '{'>
+    [ <ident> <!before '{'> <!before ';'>
     || {pop_context()} <!>]
     #{ say "struct-or-union-specifier:sym<spec> 2"; }
     
@@ -683,7 +677,7 @@ rule enum-specifier:sym<decl> {c
     '}'
 }
 rule enum-specifier:sym<spec> {
-    <enum-keyword> <ident> <!before '{'>
+    <enum-keyword> <ident> <!before '{'> <!before ';'>
 }
 
 rule enumerator-list { <enumerator> [',' <enumerator>]* }
@@ -897,7 +891,7 @@ rule direct-abstract-declarator-rest:sym<p-parameter-type-list> {
 
 # SS 6.7.8
 rule typedef-name {
-    <ident>
+    <ident> <!before ';'>
     {
         if is_typedef($<ident>) && ($<ident><name>.Str ∉ @*BUILTIN_TYPEDEFS) {
            note "found typedef '{$<ident><name>.Str}'";

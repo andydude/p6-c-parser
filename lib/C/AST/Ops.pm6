@@ -90,16 +90,19 @@ enum OpKind is export <
 >;
 
 enum TyKind is export <
-    attribute 
+    anonymous_struct
+    anonymous_union
     apple_block_declarator
-    apple_block_type
     apple_block_expr
+    apple_block_type
     apple_block_var
     array_declarator
     array_designator
     array_type
     atomic_type
+    attribute 
     declaration
+    declaration_specifiers
     direct_declarator
     direct_type
     enum_decl

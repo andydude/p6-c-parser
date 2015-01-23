@@ -37,12 +37,12 @@ class Specs is export is Node does Type {
 
 class Size is IntVal does Type {}
 
-class Op does Operation does Compound {
+class Op is Node does Operation does Compound {
     has OpKind $.op;
 	has Compound @.children
 }
 
-class TypeOp does Operation does Type {
+class TypeOp is Node does Operation does Type {
     has TyKind $.op;
 	has Type @.children
 }
