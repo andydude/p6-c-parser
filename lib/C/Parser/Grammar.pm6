@@ -279,11 +279,11 @@ rule primary-expression:sym<constant> {
 rule primary-expression:sym<string-literal> {
     <string-constant>
 }
-rule primary-expression:sym<expression> {
-    '(' <expression> ')'
-}
 rule primary-expression:sym<compound-statement> { # GNU
     '(' <compound-statement> ')'
+}
+rule primary-expression:sym<expression> {
+    '(' <expression> ')'
 }
 rule primary-expression:sym<generic-selection> { # C11
     <generic-selection>
@@ -668,7 +668,7 @@ rule struct-declarator:sym<bit> {
 
 # SS 6.7.2.2
 proto rule enum-specifier {*}
-rule enum-specifier:sym<decl> {c
+rule enum-specifier:sym<decl> {
     <enum-keyword> <ident>?
     '{'
     {push_context('enum')}

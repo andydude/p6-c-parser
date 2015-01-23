@@ -11,12 +11,9 @@ role External {}
 # Operation represents compound structures.
 role Operation {}
 
-# Type represents all type structures.
-role Type does Compound does External {}
-
 class Node {}
 
-class Value is Node does Compound {}
+class Value is Node does Compound does External {}
 
 class CharVal is Value {
     has Str $.value;
@@ -31,28 +28,28 @@ class StrVal is Value {
     has Str $.value;
 }
 
-class Specs is export is Node does Type {
+class Specs is export is Node does External {
     has Spec @.children;
 }
-
-class Size is IntVal does Type {}
 
 class Op is Node does Operation does Compound {
     has OpKind $.op;
     has Compound @.children;
 }
 
-class TypeOp is Node does Operation does Type {
+class TypeOp is Node does Operation does External {
     has TyKind $.op;
-    has Type @.children;
+    has External @.children;
 }
 
-class Name is Node does Type {
+class Size is IntVal does External {}
+
+class Name is Node does Compound does External {
     has Str $.name;
 }
 
 class Arg is Name {
-    has Type $.type;
+    has External $.type;
 }
 
 class Init is Arg {
@@ -60,7 +57,7 @@ class Init is Arg {
 }
 
 class Decl is Arg {
-    has Type @.children; # usually Init
+    has External @.children; # usually Init
 }
 
 class TransUnit is Node {

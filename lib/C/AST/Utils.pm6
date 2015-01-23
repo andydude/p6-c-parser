@@ -29,19 +29,19 @@ our sub get_declarator_name(Match $decr --> Str) {
 }
 
 our sub synthesize_declarator(
-    C::AST::Type $declarator,
-    C::AST::Type $designator --> C::AST::Type) {
+    C::AST::External $declarator,
+    C::AST::External $designator --> C::AST::External) {
     
     $designator.children.unshift($declarator);
-    my $ast = C::AST::TypeOp.new(
+    my $ast = C::AST::ExternalOp.new(
         op => TyKind::declarator,
         children => $designator);
     return $ast;
 }
 
 our sub synthesize_declaration(
-    C::AST::Type $specifiers,
-    C::AST::Type $declarator --> C::AST::Type) {
+    C::AST::External $specifiers,
+    C::AST::External $declarator --> C::AST::External) {
     
     our $ast = C::AST::Decl.new(
         type => $specifiers, 
@@ -56,13 +56,25 @@ our sub synthesize_init_declarator(
 }
 
 our sub synthesize_init_declaration(
-    C::AST::Type $specifiers,
-    @init_declarators --> C::AST::Type) {
+    C::AST::External $specifiers,
+    @init_declarators --> C::AST::External) {
     
     my @inits = @init_declarators;
     our $ast = C::AST::Decl.new(
         type => $specifiers, 
         children => @inits);
+    say $ast.perl;
+    return $ast;
+}
+
+our sub synthesize_struct_declaration(
+    C::AST::External $specifiers,
+    @struct_declarators --> C::AST::External) {
+    
+    my @fields = @struct_declarators;
+    our $ast = C::AST::Decl.new(
+        type => $specifiers, 
+        children => @fields);
     say $ast.perl;
     return $ast;
 }

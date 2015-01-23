@@ -142,6 +142,7 @@ token typeof-keyword        { '__typeof__' || 'typeof' }
 # Nonstandard name: ident
 # Rationale: 'ident' is more Perl-ish
 token ident { 
+    <!before <keyword>>
 	$<name>=(<.ident-first> <.ident-rest>*)
 }
 

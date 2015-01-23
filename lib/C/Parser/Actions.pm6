@@ -43,7 +43,7 @@ method character-constant:sym<U>($/) {
 }
 
 method c-char-sequence($/) {
-    my $value = $<c-char>.Str;
+    my $value = (map {$_.Str}, @<c-char>).join;
     make C::AST::CharVal.new(:$value);
 }
 
@@ -54,7 +54,7 @@ method string-literal:sym<quote>($/) { make $<s-char-sequence>.ast }
 #method string-literal:sym<U>($/)  { make $<s-char-sequence>.ast }
 
 method s-char-sequence($/) {
-    my $value = $<s-char>.Str;
+    my $value = (map {$_.Str}, @<s-char>).join;
     make C::AST::StrVal.new(:$value);
 }
 
@@ -103,34 +103,33 @@ method primary-expression:sym<generic-selection>($/) { # C11
 # SS 6.5.1.1
 
 method generic-selection($/) {
-    make [$<assignment-expression>.ast, 
-          $<generic-assoc-list>.ast];
+    my @children = $<generic-assoc-list>.ast;
+    @children.unshift($<assignment-expression>.ast);
+    make C::AST::Op.new(op => OpKind::generic_expr, :@children);
 }
 
-#TODO
 method generic-assoc-list($/) {
-    make [$<generic-association>.ast, 
-          $<generic-association>.ast];
+    make map {$_.ast}, @<generic-association>;
 }
 
-#TODO
 method generic-association:sym<typename>($/) {
-    make [$<type-name>.ast,
-         $<assignment-expression>.ast];
+    my @children = ($<type-name>.ast, $<assignment-expression>.ast);
+    make C::AST::Op.new(op => OpKind::generic_case, :@children);
 }
-#TODO
 method generic-association:sym<default>($/) {
-    make [$<assignment-expression>.ast];
+    my @children = ($<assignment-expression>.ast,);
+    make C::AST::Op.new(op => OpKind::generic_default, :@children);
 }
 
 # SS 6.5.2
 
 method postfix-expression($/) {
     my $ast = $<postfix-expression-first>.ast;
-
-    #for @<postfix-expression-rest>
-    #make ;
-    make $<postfix-expression-first>.ast;
+    for @<postfix-expression-rest> -> $expr {
+        $expr.ast.children.unshift($ast);
+        $ast = $expr.ast;
+    }
+    make $ast;
 }
 
 method postfix-expression-first:sym<primary>($/) {
@@ -169,13 +168,11 @@ method postfix-expression-rest:sym«->»($/)  {
     );
 }
 method postfix-expression-rest:sym<++>($/)  {
-    make OpKind::postinc;
+    make C::AST::Op.new(op => OpKind::postinc);
 }
 method postfix-expression-rest:sym<-->($/)  {
-    make OpKind::postdec;
+    make C::AST::Op.new(op => OpKind::postdec);
 }
-
-
 
 method argument-expression-list($/) {
     make C::AST::Op.new(op => OpKind::call,
@@ -190,32 +187,32 @@ method unary-expression:sym<postfix>($/) {
 }
 
 method unary-expression:sym<++>($/) {
-    make C::AST::Op.new(OpKind::preinc,
+    make C::AST::Op.new(op => OpKind::preinc,
         children => $<unary-expression>.ast
     );
 }
 
 method unary-expression:sym<-->($/) {
-    make C::AST::Op.new(OpKind::predec,
+    make C::AST::Op.new(op => OpKind::predec,
         children => $<unary-expression>.ast
     );
 }
 
 method unary-expression:sym<unary-cast>($/) {
-    make C::AST::Op.new($<unary-operator>.ast,
+    make C::AST::Op.new(op => $<unary-operator>.ast,
         children => $<cast-expression>.ast
     );
 }
 
-#method unary-expression:sym<size-of-expr>($/) {
-#    <sizeof-keyword> <unary-expression>
-#}
-#method unary-expression:sym<size-of-type>($/) {
-#    <sizeof-keyword> '(' <type-name> ')'
-#}
-#method unary-expression:sym<align-of-type>($/) {
-#    <alignof-keyword> '(' <type-name> ')'
-#}
+method unary-expression:sym<size-of-expr>($/) {
+    make C::AST::Op.new(op => OpKind::sizeof_expr, children => ($<unary-expression>.ast,));
+}
+method unary-expression:sym<size-of-type>($/) {
+    make C::AST::Op.new(op => OpKind::sizeof_type, children => ($<type-name>.ast,));
+}
+method unary-expression:sym<align-of-type>($/) {
+    make C::AST::Op.new(op => OpKind::alignof_type, children => ($<type-name>.ast,));
+}
 
 method unary-operator:sym<&> {
     make OpKind::ref;
@@ -355,9 +352,16 @@ method logical-or-operator:sym<||>($/) {
 
 # SS 6.5.15
 method conditional-expression($/) {
-      #TODO ternary operator
     #make C::AST::Utils::binop_from_lassoc(@<operators>, @<operands>);
-    make @<operands>[0].ast;
+    my $ast = (shift @<operands>).ast;
+
+    while @<operands> {
+        my $con = (shift @<operands>).ast;
+        my $alt = (shift @<operands>).ast;
+        $ast = C::AST::Op.new(op => OpKind::if_expr, children => ($ast, $con, $alt)); 
+    }
+
+    make $ast;
 }
 
 # SS 6.5.16
@@ -490,9 +494,10 @@ method init-declarator-list($/) {
 method init-declarator($/) {
     my $type = $<declarator> ?? $<declarator>.ast !! Nil;
     my $value = $<initializer> ?? $<initializer>.ast !! Nil;
+    my $name = C::AST::Utils::get_declarator_name($<declarator>);
 
     if $type && $value {
-        make C::AST::Init.new(:$type, :$value);
+        make C::AST::Init.new(:$type, :$value, :$name);
     }
     elsif $type {
         make $type;
@@ -564,12 +569,12 @@ method struct-or-union-specifier:sym<decl>($/) {
     our $op = Nil;
     our @children = $<struct-declaration-list> ?? $<struct-declaration-list>.ast !! ();
     if $<ident> {
-        $op = TyKind::struct_decl;
+        $op = TyKind::struct_declaration;
     }
     else {
         $op = TyKind::anonymous_struct;
     }
-    make C::AST::TypeOp.new(:$op);#, :@children);
+    make C::AST::TypeOp.new(:$op, :@children);
 }
 method struct-or-union-specifier:sym<spec>($/) {
     my @children = $<struct-declaration-list> ?? $<struct-declaration-list>.ast !! ();
@@ -579,6 +584,58 @@ method struct-or-union-specifier:sym<spec>($/) {
 
 method struct-keyword($/) { make "struct" }
 method union-keyword($/)  { make "union" }
+
+method struct-declaration-list($/) {
+    make map {$_.ast}, @<struct-declaration>;
+}
+
+method struct-declaration:sym<struct>($/) {
+    if $<struct-declarator-list> {
+        make C::AST::Utils::synthesize_struct_declaration(
+            $<specifier-qualifier-list>.ast,
+            $<struct-declarator-list>.ast);
+    }
+    else {
+        make $<specifier-qualifier-list>.ast;
+    }
+}
+method struct-declaration:sym<static_assert>($/) { # C11
+    make $<static-assert-declaration>.ast;
+}
+
+method specifier-qualifier-list($/) {
+    make C::AST::Specs.new(children => map {$_.ast}, @<specifier-qualifier>);
+}
+
+method specifier-qualifier:sym<type-specifier>($/) {
+    make $<type-specifier>.ast;
+}
+
+method specifier-qualifier:sym<type-qualifier>($/) {
+    make $<type-qualifier>.ast;
+}
+
+method struct-declarator-list($/) {
+    make map {$_.ast}, @<struct-declarator>;
+}
+
+method struct-declarator:sym<std>($/) {
+    if $<constant-expression> {
+        my @children = ($<declarator>.ast, $<constant-expression>.ast);
+        make C::AST::TypeOp.new(
+            op => TyKind::struct_bit_declarator,
+            children => @children);
+    }
+    else {
+        make $<declarator>.ast;
+    }
+}
+method struct-declarator:sym<bit>($/) {
+    my @children = (C::AST::Spec.new(children => Spec::int), $<constant-expression>.ast);
+    make C::AST::TypeOp.new(
+        op => TyKind::struct_bit_declarator,
+        children => @children);
+}
 
 # SS 6.7.2.2
 
@@ -766,7 +823,7 @@ method identifier-list($/) {
 method type-name($/) {
     my @children = $<specifier-qualifier-list>.ast;
     my $decr = $<abstract-declarator>.ast;
-    make C::AST::RefType.new(@children);
+    make C::AST::TypeOp.new(op => TyKind::type_name, :@children);
 }
 method abstract-declarator:sym<pointer>($/)  {
     make $<pointer>.ast;
@@ -856,10 +913,10 @@ method designation-initializer($/) {
 # SS 6.7.10
 
 method static-assert-declaration($/) { # C11
-    make C::AST::Op.new(
-        op => OpKind::static_assert_declaration,
+    make C::AST::TypeOp.new(
+        op => TyKind::static_assert_declaration,
         children => ($<constant-expression>.ast, 
-                     $<string-literal>.ast));
+                     $<string-constant>.ast));
 }
 
 # SS 6.8

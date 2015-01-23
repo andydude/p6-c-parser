@@ -105,7 +105,7 @@ enum TyKind is export <
     declaration_specifiers
     direct_declarator
     direct_type
-    enum_decl
+    enum_declaration
     enum_type
     enumerator
     fixed_length_array_designator
@@ -125,7 +125,9 @@ enum TyKind is export <
     struct_type
     static_assert_declaration
     typeof_expr
-    union_decl
+    union_declaration
+    union_declarator
+    union_designator
     union_type
     variable_length_array_designator
     variable_length_array_type
