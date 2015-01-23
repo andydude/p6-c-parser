@@ -39,12 +39,12 @@ class Size is IntVal does Type {}
 
 class Op is Node does Operation does Compound {
     has OpKind $.op;
-	has Compound @.children
+    has Compound @.children;
 }
 
 class TypeOp is Node does Operation does Type {
     has TyKind $.op;
-	has Type @.children
+    has Type @.children;
 }
 
 class Name is Node does Type {
