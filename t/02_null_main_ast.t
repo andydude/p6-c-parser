@@ -2,9 +2,8 @@
 use v6;
 use Test;
 plan 1;
-use C::Parser::CAST;
-use C::Parser::CASTActions;
-use C::Parser::StdC11Parser;
+use C::AST;
+use C::Parser;
 
 our $source = q<<<
     int main() {
@@ -13,7 +12,6 @@ our $source = q<<<
 >>>;
 
 {
-    my $actions = C::Parser::CASTActions.new();
-    my $ast = C::Parser::StdC11Parser.parse($source, :$actions);
-    isa_ok($ast.ast, TranslationUnit, 'gives a TranslationUnit');
+    my $ast = C::Parser.parse($source);
+    isa_ok($ast, C::AST::TransUnit, 'gives a C::AST::TransUnit');
 }

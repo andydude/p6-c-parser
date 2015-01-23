@@ -1,45 +1,10 @@
 #!/usr/bin/env perl6
 use v6;
 use lib 'lib';
-use C::Parser::CASTActions;
-use C::Parser::StdC11Lexer;
-use C::Parser::StdC11Parser;
-
-sub fake_indent (Str $input --> Str) {
-    my regex three_liner {
-        $<line>=['('   <-[()\n]>*]
-        <.ws> $<line>=[<-[()\n]>*]
-        <.ws> $<line>=[<-[()\n]>* ')']
-    };
-
-    my sub one_liner($/) {
-        return @<line>.join;
-    }
-
-    my $out = $input;
-    $out.=subst("(", "(\n", :g);
-    $out.=subst(")", "\n)", :g);
-    $out.=subst(rx{',' <.ws>}, ",\n", :g);
-    $out.=subst("\n\n", "\n", :g);
-    $out.=subst("(\n)", "()", :g);
-    $out.=subst(&three_liner, &one_liner, :g);
-    our $count = 0;
-    our @inlines = $out.lines;
-    our @outlines = @();
-    for @inlines -> $line {
-        if $line ~~ rx{^ ')'} {
-            $count -= $line.split(")").elems - 1;
-            @outlines.push($line.indent(4*$count));
-        }
-        else {
-            @outlines.push($line.indent(4*$count));
-            $count -= $line.split(")").elems - 1;
-        }
-        $count += $line.split("(").elems - 1;
-    }
-    $out = @outlines.join("\n");
-    return $out;
-}
+use C::Parser::Actions;
+use C::Parser::Lexer;
+use C::Parser::Grammar;
+use C::Parser::Utils;
 
 sub MAIN (Str $input = "-",
 #    Str :$output = "-",
@@ -51,7 +16,7 @@ sub MAIN (Str $input = "-",
     Bool :$verbose = False)
 {
     my Str $source = ($input eq "-") ?? slurp("/dev/stdin") !! slurp($input);
-    my $parser = $lexonly ?? C::Parser::StdC11Lexer !! C::Parser::StdC11Parser;
+    my $parser = $lexonly ?? C::Parser::Lexer !! C::Parser::Grammar;
     my $ast;
 
     #if $preproc {
@@ -66,7 +31,7 @@ sub MAIN (Str $input = "-",
             $ast = $parser.parse($source);
         }
         when "cast" {
-            my $actions = C::Parser::CASTActions.new();
+            my $actions = C::Parser::Actions.new();
             $ast = $parser.parse($source, :$actions);
         }
         default {
@@ -86,7 +51,7 @@ sub MAIN (Str $input = "-",
         }
         when "ast" {
             say "--- Output" if $verbose;
-            my $out = fake_indent($ast.ast.perl);
+            my $out = C::Parser::Utils::fake_indent($ast.ast.perl);
             say $out;
         }
         when "str" {

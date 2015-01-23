@@ -1,7 +1,7 @@
 # References ISO/IEC 9899:1990 "Information technology - Programming Language C" (C89 for short)
 use v6;
 #use Grammar::Tracer;
-grammar C::Parser::StdC11Lexer;
+grammar C::Parser::Lexer;
 
 token TOP {^ <.ws> <c-tokens> [$ || {die("expected eof")}] }
 
@@ -133,6 +133,8 @@ token thread-local-keyword  { '_Thread_local' || 'thread_local' }
 
 token asm-keyword  			{ '__asm__' || '__asm' || 'asm' }
 token attribute-keyword 	{ '__attribute__' }
+token block-keyword         { '__block' }
+token typeof-keyword        { '__typeof__' || 'typeof' }
 
 # SS 6.4.2.1
 

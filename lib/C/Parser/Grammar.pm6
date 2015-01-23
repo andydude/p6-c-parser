@@ -1,8 +1,8 @@
 # References ISO/IEC 9899:1990 "Information technology - Programming Language C" (C89 for short)
 use v6;
 #use Grammar::Tracer;
-use C::Parser::StdC11Lexer;
-grammar C::Parser::StdC11Parser is C::Parser::StdC11Lexer;
+use C::Parser::Lexer;
+grammar C::Parser::Grammar is C::Parser::Lexer;
 
 rule TOP {
     :my %*ENUMS;
@@ -186,16 +186,18 @@ sub context_is(Str $ctx --> Bool) {
 
 sub get_declarator_name(Match $decr --> Str) {
     my Match $ddecr1 = $decr<direct-declarator><direct-declarator-first>;
-    my Str $name = $ddecr1<declarator> ?? get_declarator_name($ddecr1<declarator>) !! $ddecr1<ident><name>.Str;
+    my Str $name = $ddecr1<declarator>
+        ?? get_declarator_name($ddecr1<declarator>)
+        !! $ddecr1<ident><name>.Str;
     return $name;
 }
 
 sub end_declaration(Any $decls, Any $inits) {
-    if @*CONTEXTS < 1 {
+    if @*CONTEXTS.elems < 1 {
        return;
     }
     my $context_was = @*CONTEXTS[*-1];
-    if context_is('struct') || context_is('union') {
+    while context_is('struct') || context_is('union') {
         pop_context();
     }
     my $context = @*CONTEXTS[*-1];
@@ -508,6 +510,10 @@ rule constant-expression { <conditional-expression> }
 
 # SS 6.7
 proto rule declaration {*}
+rule declaration:sym<direct-typedef> {
+    'typedef' <declaration-specifiers> <ident> ';'
+}
+
 rule declaration:sym<declaration> {
     <declaration-specifiers> <init-declarator-list>? ';'
     {end_declaration($<declaration-specifiers>, $<init-declarator-list>)}
@@ -525,29 +531,19 @@ rule declaration-specifiers {
 # so we factor it out as <declaration-specifier>+ which means the same.
 proto rule declaration-specifier {*}
 rule declaration-specifier:sym<storage-class> {
-    #{ say "declaration-specifier:sym<storage-class> 1"; }
     <storage-class-specifier>
-    #{ say "declaration-specifier:sym<storage-class> 2"; }
 }
 rule declaration-specifier:sym<type-specifier> {
-    #{ say "declaration-specifier:sym<type-specifier> 1"; }
     <type-specifier>
-    #{ say "declaration-specifier:sym<type-specifier> 2"; }
 }
 rule declaration-specifier:sym<type-qualifier> {
-    #{ say "declaration-specifier:sym<type-qualifier> 1"; }
     <type-qualifier>
-    #{ say "declaration-specifier:sym<type-qualifier> 2"; }
 }
 rule declaration-specifier:sym<function> {
-    #{ say "declaration-specifier:sym<function> 1"; }
     <function-specifier>
-    #{ say "declaration-specifier:sym<function> 2"; }
 }
 rule declaration-specifier:sym<alignment> {
-    #{ say "declaration-specifier:sym<alignment> 1"; }
     <alignment-specifier>
-    #{ say "declaration-specifier:sym<alignment> 2"; }
 }
 rule declaration-specifier:sym<__attribute__> { # GNU
     <attribute-keyword>
@@ -599,7 +595,7 @@ rule type-specifier:sym<typedef-name>    {
 }
 
 rule type-specifier:sym<__typeof__> { # GNU
-    <sym>
+    <typeof-keyword>
     '('
     <expression>
     ')'
@@ -610,16 +606,15 @@ proto rule struct-or-union-specifier {*}
 rule struct-or-union-specifier:sym<decl> {
     :my $ctx;
     <struct-or-union>
-    <ident>?
+    [ <ident>?
     '{'
-    {push_context('strunion')}
     <struct-declaration-list>
-    '}'
+    '}' || {pop_context()} <!>]
 }
 rule struct-or-union-specifier:sym<spec> {
     #{ say "struct-or-union-specifier:sym<spec> 1"; }
     <struct-or-union>
-    [[<ident> <!before '{'>]
+    [ <ident> <!before '{'> <!before ';'>
     || {pop_context()} <!>]
     #{ say "struct-or-union-specifier:sym<spec> 2"; }
     
@@ -673,7 +668,7 @@ rule struct-declarator:sym<bit> {
 
 # SS 6.7.2.2
 proto rule enum-specifier {*}
-rule enum-specifier:sym<decl> {
+rule enum-specifier:sym<decl> {c
     <enum-keyword> <ident>?
     '{'
     {push_context('enum')}
@@ -682,7 +677,7 @@ rule enum-specifier:sym<decl> {
     '}'
 }
 rule enum-specifier:sym<spec> {
-    <enum-keyword> <ident> <!before '{'>
+    <enum-keyword> <ident> <!before '{'> <!before ';'>
 }
 
 rule enumerator-list { <enumerator> [',' <enumerator>]* }
@@ -731,11 +726,8 @@ rule declarator:sym<direct> {
 }
 
 rule direct-declarator {
-    #{ say "direct-declarator 1"; }
     <direct-declarator-first>
-    #{ say "direct-declarator 2"; }
     <direct-declarator-rest>*
-    #{ say "direct-declarator 3"; }
 }
 
 proto rule direct-declarator-first {*}
@@ -813,11 +805,22 @@ rule attribute-specifier { # GNU
 }
 
 proto rule assembly {*}
-rule assembly:sym<std> {
+rule assembly:sym<std> { # GNU
     <asm-keyword>
     '('
     <string-constant>
+    [':' <assembly-operand-list>]*
     ')'
+}
+
+rule assembly-operand-list {
+    <assembly-operand> [',' <assembly-operand>]*
+}
+
+rule assembly-operand {
+	['[' <ident> ']']? 
+	<string-literal> 
+	['(' <expression> ')']?
 }
 
 proto rule pointer {*}
@@ -888,7 +891,7 @@ rule direct-abstract-declarator-rest:sym<p-parameter-type-list> {
 
 # SS 6.7.8
 rule typedef-name {
-    <ident>
+    <ident> <!before ';'>
     {
         if is_typedef($<ident>) && ($<ident><name>.Str ∉ @*BUILTIN_TYPEDEFS) {
            note "found typedef '{$<ident><name>.Str}'";
@@ -1043,6 +1046,31 @@ rule jump-statement:sym<break> {
 rule jump-statement:sym<return> {
     <return-keyword> <expression>? ';'
 }
+
+############################################################
+##
+##  Keywords
+##
+
+############################################################
+##
+##  Constants
+##
+
+############################################################
+##
+##  Expressions
+##
+
+############################################################
+##
+##  Compound Statements and External Declarations
+##
+
+############################################################
+##
+##  Translation Unit
+##
 
 # SS 6.9
 rule translation-unit {
