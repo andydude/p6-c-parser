@@ -37,6 +37,23 @@ rule TOP {
         guint8
         gulong
         gushort
+        qint8
+        qint16
+        qint32
+        qint64
+        qlonglong
+        qptrdiff
+        qreal
+        quint8
+        quint16
+        quint32
+        quint64
+        quintptr
+        qulonglong
+        uchar
+        uint
+        ulong
+        ushort
         DIR
         FILE
         blkcnt_t
