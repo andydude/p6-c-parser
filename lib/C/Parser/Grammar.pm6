@@ -2,183 +2,18 @@
 use v6;
 #use Grammar::Tracer;
 use C::Parser::Lexer;
+use C::Parser::Utils;
 grammar C::Parser::Grammar is C::Parser::Lexer;
 
 rule TOP {
-    :my %*ENUMS;
-    :my %*STRUCTS;
-    :my %*TYPEDEFS;
-    :my @*CONTEXTS = @();
-
-    # BUILTIN_TYPEDEFS never changes
-    # maybe this could be const/final?
-    :my @*BUILTIN_TYPEDEFS = qw<<<
-        __builtin_va_list
-        gboolean
-        gchar
-        gconstpointer
-        gdouble
-        gfloat
-        gint
-        gint16
-        gint32
-        gint64
-        gint8
-        glong
-        gpointer
-        gshort
-        gsize
-        gssize
-        guchar
-        guint
-        guint16
-        guint32
-        guint64
-        guint8
-        gulong
-        gushort
-        qint8
-        qint16
-        qint32
-        qint64
-        qlonglong
-        qptrdiff
-        qreal
-        quint8
-        quint16
-        quint32
-        quint64
-        quintptr
-        qulonglong
-        uchar
-        uint
-        ulong
-        ushort
-        DIR
-        FILE
-        blkcnt_t
-        blksize_t
-        cc_t
-        char16_t
-        char32_t
-        clock_t
-        clockid_t
-        cnd_t
-        dev_t
-        div_t
-        double_t
-        fenv_t
-        fexcept_t
-        float_t
-        fpos_t
-        fsblkcnt_t
-        fsfilcnt_t
-        gid_t
-        glob_t
-        id_t
-        idtype_t
-        imaxdiv_t
-        in_addr_t
-        in_port_t
-        ino_t
-        int16_t
-        int32_t
-        int64_t
-        int8_t
-        int_fast16_t
-        int_fast32_t
-        int_fast64_t
-        int_fast8_t
-        int_least16_t
-        int_least32_t
-        int_least64_t
-        int_least8_t
-        intmax_t
-        intptr_t
-        key_t
-        ldiv_t
-        lldiv_t
-        locale_t
-        mbstate_t
-        mode_t
-        msglen_t
-        msgqnum_t
-        mtx_t
-        nlink_t
-        off_t
-        off_t
-        once_flag
-        pid_t
-        pthread_attr_t
-        pthread_barrier_t
-        pthread_barrierattr_t
-        pthread_cond_t
-        pthread_condattr_t
-        pthread_key_t
-        pthread_mutex_t
-        pthread_mutexattr_t
-        pthread_once_t
-        pthread_rwlock_t
-        pthread_rwlockattr_t
-        pthread_spinlock_t
-        pthread_t
-        ptrdiff_t
-        regex_t
-        regmatch_t
-        regoff_t
-        rsize_t
-        sa_family_t
-        sem_t
-        sig_atomic_t
-        siginfo_t
-        sigset_t
-        size_t
-        socklen_t
-        speed_t
-        ssize_t
-        suseconds_t
-        tcflag_t
-        thrd_start_t
-        thrd_t
-        time_t
-        timer_t
-        trace_attr_t
-        trace_event_id_t
-        trace_event_set_t
-        trace_id_t
-        tss_dtor_t
-        tss_t
-        uid_t
-        uint16_t
-        uint32_t
-        uint64_t
-        uint8_t
-        uint_fast16_t
-        uint_fast32_t
-        uint_fast64_t
-        uint_fast8_t
-        uint_least16_t
-        uint_least32_t
-        uint_least64_t
-        uint_least8_t
-        uintmax_t
-        uintptr_t
-        useconds_t
-        va_list
-        wchar_t
-        wctrans_t
-        wctype_t
-        wint_t
-        wordexp_t
-    >>>;
-    {
-        for @*BUILTIN_TYPEDEFS -> Str $typename {
-            #note("new builtin typedef '{$typename}'");
-            %*TYPEDEFS{$typename} = True;
-        }
-    }
 	^ <.ws> <translation-unit>
-    [$ || {die("expected eof")}]
+    [$ || {
+        my $bad = $<translation-unit><external-declaration>[*-1];
+        my $lineno = substr($<translation-unit>.orig, 0, $bad.to).lines.elems;
+        my $msg = substr($<translation-unit>.orig, $bad.to, min($bad.to + 60, $<translation-unit>.orig.chars));
+        my $msg2 = substr($msg, 0, min(60, $msg.chars));
+        die("input:" ~ $lineno ~ ": expected declaration, but got: `" ~ $msg2.chomp() ~ "...`")
+    }]
 }
 
 # subroutines for typedefs
@@ -243,6 +78,11 @@ sub end_declaration(Any $decls, Any $inits) {
         }
         %*TYPEDEFS{$name} = True;
     }
+    elsif $inits {
+        my Str $name = $inits<name>.Str;
+        #note("defining $context '$name'!");
+        %*TYPEDEFS{$name} = True;
+    }
     elsif $decls && $decls<declaration-specifier> {
         if !$decls<declaration-specifier>[*-1] {
             warn("unknown condition in $context!");
@@ -284,6 +124,11 @@ sub is_typedef(Match $ident --> Bool) {
 }
 
 
+############################################################
+##
+##  Expressions
+##
+
 # SS 6.5.1
 
 proto rule primary-expression {*}
@@ -304,6 +149,33 @@ rule primary-expression:sym<expression> {
 }
 rule primary-expression:sym<generic-selection> { # C11
     <generic-selection>
+}
+rule primary-expression:sym<offsetof-expression> { # GNU
+    <offsetof-expression>
+}
+
+rule offsetof-expression {
+    <offsetof-keyword>
+    '('
+    <type-name>
+	','
+	<offsetof-member-designator>        
+    ')'
+}
+
+rule offsetof-member-designator {
+    <offsetof-member-designator-first>
+    <offsetof-member-designator-rest>*
+}
+rule offsetof-member-designator-first {
+    <ident>
+}
+proto rule offsetof-member-designator-rest {*}
+rule offsetof-member-designator-rest:sym<struct> {
+    '.' <ident>
+}
+rule offsetof-member-designator-rest:sym<array> {
+    "[" <primary-expression> "]"
 }
 
 # SS 6.5.1.1
@@ -525,10 +397,17 @@ rule expression {
 # SS 6.6
 rule constant-expression { <conditional-expression> }
 
+
+############################################################
+##
+##  Declarations
+##
+
 # SS 6.7
 proto rule declaration {*}
 rule declaration:sym<direct-typedef> {
-    'typedef' <declaration-specifiers> <ident> ';'
+    'typedef' {push_context('typedef')} <declaration-specifiers> <ident> ';'
+    {end_declaration($<declaration-specifiers>, $<ident>)}
 }
 
 rule declaration:sym<declaration> {
@@ -577,21 +456,21 @@ proto rule storage-class-specifier {*}
 rule storage-class-specifier:sym<typedef>  { <sym> {push_context('typedef')} }
 rule storage-class-specifier:sym<extern>   { <sym> {push_context('extern')} }
 rule storage-class-specifier:sym<static>   { <sym> }
-rule storage-class-specifier:sym<_Thread_local> { <sym> { $*THREAD_LOCAL_CONTEXT = True; } }
+rule storage-class-specifier:sym<_Thread_local> { <thread-local-keyword> }
 rule storage-class-specifier:sym<auto>     { <sym> }
 rule storage-class-specifier:sym<register> { <sym> }
 
 # SS 6.7.2
 proto rule type-specifier {*}
-rule type-specifier:sym<void>     { <sym> }
-rule type-specifier:sym<char>     { <sym> }
-rule type-specifier:sym<short>    { <sym> }
-rule type-specifier:sym<int>      { <sym> }
-rule type-specifier:sym<long>     { <sym> }
-rule type-specifier:sym<float>    { <sym> }
-rule type-specifier:sym<double>   { <sym> }
-rule type-specifier:sym<signed>   { <sym> }
-rule type-specifier:sym<unsigned> { <sym> }
+rule type-specifier:sym<void>     { <void-keyword> }
+rule type-specifier:sym<char>     { <char-keyword> }
+rule type-specifier:sym<short>    { <short-keyword> }
+rule type-specifier:sym<int>      { <int-keyword> }
+rule type-specifier:sym<long>     { <long-keyword> }
+rule type-specifier:sym<float>    { <float-keyword> }
+rule type-specifier:sym<double>   { <double-keyword> }
+rule type-specifier:sym<signed>   { <signed-keyword> }
+rule type-specifier:sym<unsigned> { <unsigned-keyword> }
 rule type-specifier:sym<_Bool>    { <sym> } # stdbool.h
 rule type-specifier:sym<_Complex> { <sym> } # complex.h
 rule type-specifier:sym<_Fract>   { <sym> } # stdfix.h
@@ -603,7 +482,6 @@ rule type-specifier:sym<atomic-type>     {  # stdatomic.h
 rule type-specifier:sym<struct-or-union> {
     <struct-or-union-specifier>
 }
-# TODO
 rule type-specifier:sym<enum-specifier>  {
     <enum-specifier>
 }
@@ -613,9 +491,7 @@ rule type-specifier:sym<typedef-name>    {
 
 rule type-specifier:sym<__typeof__> { # GNU
     <typeof-keyword>
-    '('
-    <expression>
-    ')'
+    '(' <expression> ')'
 }
 
 # SS 6.7.2.1
@@ -629,11 +505,9 @@ rule struct-or-union-specifier:sym<decl> {
     '}' || {pop_context()} <!>]
 }
 rule struct-or-union-specifier:sym<spec> {
-    #{ say "struct-or-union-specifier:sym<spec> 1"; }
     <struct-or-union>
-    [ <ident> <!before '{'> <!before ';'>
+    [ <ident> <!before '{'>
     || {pop_context()} <!>]
-    #{ say "struct-or-union-specifier:sym<spec> 2"; }
     
 }
 
@@ -707,22 +581,20 @@ rule enumerator {
 proto rule atomic-type-specifier {*} # C11
 rule atomic-type-specifier:sym<_Atomic> {
     <atomic-keyword>
-    '('
-    <type-name>
-    ')'
+    '(' <type-name> ')'
 }
 
 # SS 6.7.3
 proto rule type-qualifier {*}
 rule type-qualifier:sym<const>    { <sym> }
-rule type-qualifier:sym<restrict> { <sym> }
 rule type-qualifier:sym<volatile> { <sym> }
-rule type-qualifier:sym<_Atomic>  { <sym> }
+rule type-qualifier:sym<restrict> { <restrict-keyword> }
+rule type-qualifier:sym<_Atomic>  { <atomic-keyword> }
 
 # SS 6.7.4
 proto rule function-specifier {*}
-rule function-specifier:sym<inline>    { <sym> }
-rule function-specifier:sym<_Noreturn> { <sym> }
+rule function-specifier:sym<inline>    { <inline-keyword> }
+rule function-specifier:sym<_Noreturn> { <noreturn-keyword> }
 
 # SS 6.7.5
 proto rule alignment-specifier {*}
@@ -757,25 +629,19 @@ rule direct-declarator-first:sym<declarator> {
     '(' <declarator> ')'
 }
 
+proto rule static-or-type-qualifier {*}
+rule static-or-type-qualifier:sym<static> { <sym> }
+rule static-or-type-qualifier:sym<type>   { <type-qualifier> }
+
+rule static-or-type-qualifier-list {
+    <static-or-type-qualifier>+
+}
+
 proto rule direct-declarator-rest {*}
 rule direct-declarator-rest:sym<b-assignment-expression> {
     '['
-    <type-qualifier-list>?
+    <static-or-type-qualifier-list>?
     <assignment-expression>?
-    ']'
-}
-rule direct-declarator-rest:sym<b-static-type-qualifier> {
-    '['
-    <static-keyword>
-    <type-qualifier-list>?
-    <assignment-expression>
-    ']'
-}
-rule direct-declarator-rest:sym<b-type-qualifier-static> {
-    '['
-    <type-qualifier-list>
-    <static-keyword>
-    <assignment-expression>
     ']'
 }
 rule direct-declarator-rest:sym<b-type-qualifier-list> {
@@ -784,18 +650,14 @@ rule direct-declarator-rest:sym<b-type-qualifier-list> {
     ']'
 }
 rule direct-declarator-rest:sym<p-parameter-type-list> {
-    #{ say "direct-declarator-rest:sym<p-parameter-type-list> 1"; }
     '('
     <parameter-type-list>
     ')'
-    #{ say "direct-declarator-rest:sym<p-parameter-type-list> 2"; }
 }
 rule direct-declarator-rest:sym<p-identifier-list> {
-    #{ say "direct-declarator-rest:sym<p-identifier-list> 1"; }
     '('
     <identifier-list>?
     ')'
-    #{ say "direct-declarator-rest:sym<p-identifier-list> 2"; }
 }
 rule direct-declarator-rest:sym<__asm__> { # GNU
     <assembly>
@@ -909,11 +771,6 @@ rule direct-abstract-declarator-rest:sym<p-parameter-type-list> {
 # SS 6.7.8
 rule typedef-name {
     <ident> <!before ';'>
-    {
-        if is_typedef($<ident>) && ($<ident><name>.Str ∉ @*BUILTIN_TYPEDEFS) {
-           note "found typedef '{$<ident><name>.Str}'";
-        }
-    }
     <?{ is_typedef($<ident>) }>
 }
 
@@ -956,6 +813,12 @@ rule static-assert-declaration { # C11
     ')'
     ';'
 }
+
+
+############################################################
+##
+##  Statements
+##
 
 # SS 6.8
 proto rule statement {*}
@@ -1066,31 +929,26 @@ rule jump-statement:sym<return> {
 
 ############################################################
 ##
-##  Keywords
-##
-
-############################################################
-##
-##  Constants
-##
-
-############################################################
-##
-##  Expressions
-##
-
-############################################################
-##
-##  Compound Statements and External Declarations
-##
-
-############################################################
-##
 ##  Translation Unit
 ##
 
 # SS 6.9
 rule translation-unit {
+    :my %*ENUMS;
+    :my %*STRUCTS;
+    :my %*TYPEDEFS;
+    :my @*CONTEXTS = @();
+
+    # BUILTIN_TYPEDEFS never changes
+    # maybe this could be const/final?
+    :my @*BUILTIN_TYPEDEFS = C::Parser::Utils::get_builtin_types();
+    {
+        for @*BUILTIN_TYPEDEFS -> Str $typename {
+            #note("new builtin typedef '{$typename}'");
+            %*TYPEDEFS{$typename} = True;
+        }
+    }
+    
     <external-declaration>+
 }
 
@@ -1120,6 +978,12 @@ rule function-definition:sym<std> {
 }
 
 rule declaration-list { <declaration>+ }
+
+
+############################################################
+##
+##  Preprocessor
+##
 
 ## SS 6.10
 #rule preprocessing-file { <group>? }

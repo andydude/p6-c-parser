@@ -21,6 +21,12 @@ rule pp-tokens {
      <pp-token>+
 }
 
+
+############################################################
+##
+##  Keywords
+##
+
 # SS 6.4
 proto rule c-token {*}
 rule c-token:sym<keyword> { <keyword> }
@@ -40,108 +46,121 @@ rule pp-token:sym<none-of-above> { { say "none-of-the-above"; } <!> }
 
 # SS 6.4.1
 proto token keyword {*}
-token keyword:sym<auto>     { <sym> }
-token keyword:sym<break>    { <sym> }
-token keyword:sym<case>     { <sym> }
-token keyword:sym<char>     { <sym> }
-token keyword:sym<const>    { <sym> }
-token keyword:sym<continue> { <sym> }
-token keyword:sym<default>  { <sym> }
-token keyword:sym<do>       { <sym> }
-token keyword:sym<double>   { <sym> }
-token keyword:sym<else>     { <sym> }
-token keyword:sym<enum>     { <sym> }
-token keyword:sym<extern>   { <sym> }
-token keyword:sym<float>    { <sym> }
-token keyword:sym<for>      { <sym> }
-token keyword:sym<goto>     { <sym> }
-token keyword:sym<if>       { <sym> }
-token keyword:sym<inline>   { <sym> }
-token keyword:sym<int>      { <sym> }
-token keyword:sym<long>     { <sym> }
-token keyword:sym<register> { <sym> }
-token keyword:sym<restrict> { <sym> }
-token keyword:sym<return>   { <sym> }
-token keyword:sym<short>    { <sym> }
-token keyword:sym<signed>   { <sym> }
-token keyword:sym<sizeof>   { <sym> }
-token keyword:sym<static>   { <sym> }
-token keyword:sym<struct>   { <sym> }
-token keyword:sym<switch>   { <sym> }
-token keyword:sym<typedef>  { <sym> }
-token keyword:sym<union>    { <sym> }
-token keyword:sym<unsigned> { <sym> }
-token keyword:sym<void>     { <sym> }
-token keyword:sym<volatile> { <sym> }
-token keyword:sym<while>    { <sym> }
-token keyword:sym<_Alignas> { <sym> || 'alignas' } # C11
-token keyword:sym<_Alignof> { <sym> || 'alignof' } # C11
-token keyword:sym<_Atomic>  { <sym> || 'atomic' }  # C11
-token keyword:sym<_Bool>    { <sym> || 'bool' }    # C99
-token keyword:sym<_Complex>	{ <sym> || 'complex' } # C99
-token keyword:sym<_Generic> { <sym> || 'generic' } # C11
-token keyword:sym<_Imaginary>     { <sym> || 'imaginary' }     # C99
-token keyword:sym<_Noreturn>      { <sym> || 'noreturn' }      # C11
-token keyword:sym<_Static_assert> { <sym> || 'static_assert' } # C11
-token keyword:sym<_Thread_local>  { <sym> || 'thread_local' }  # C11
+token keyword:sym<auto>     { <auto-keyword> }
+token keyword:sym<break>    { <break-keyword> }
+token keyword:sym<case>     { <case-keyword> }
+token keyword:sym<char>     { <char-keyword> }
+token keyword:sym<const>    { <const-keyword> }
+token keyword:sym<continue> { <continue-keyword> }
+token keyword:sym<default>  { <default-keyword> }
+token keyword:sym<do>       { <do-keyword> }
+token keyword:sym<double>   { <double-keyword> }
+token keyword:sym<else>     { <else-keyword> }
+token keyword:sym<enum>     { <enum-keyword> }
+token keyword:sym<extern>   { <extern-keyword> }
+token keyword:sym<float>    { <float-keyword> }
+token keyword:sym<for>      { <for-keyword> }
+token keyword:sym<goto>     { <goto-keyword> }
+token keyword:sym<if>       { <if-keyword> }
+token keyword:sym<inline>   { <inline-keyword> }
+token keyword:sym<int>      { <int-keyword> }
+token keyword:sym<long>     { <long-keyword> }
+token keyword:sym<register> { <register-keyword> }
+token keyword:sym<restrict> { <restrict-keyword> }
+token keyword:sym<return>   { <return-keyword> }
+token keyword:sym<short>    { <short-keyword> }
+token keyword:sym<signed>   { <signed-keyword> }
+token keyword:sym<sizeof>   { <sizeof-keyword> }
+token keyword:sym<static>   { <static-keyword> }
+token keyword:sym<struct>   { <struct-keyword> }
+token keyword:sym<switch>   { <switch-keyword> }
+token keyword:sym<typedef>  { <typedef-keyword> }
+token keyword:sym<union>    { <union-keyword> }
+token keyword:sym<unsigned> { <unsigned-keyword> }
+token keyword:sym<void>     { <void-keyword> }
+token keyword:sym<volatile> { <volatile-keyword> }
+token keyword:sym<while>    { <while-keyword> }
+token keyword:sym<_Alignas> { <alignas-keyword> }
+token keyword:sym<_Alignof> { <alignof-keyword> }
+token keyword:sym<_Atomic>  { <atomic-keyword> }
+token keyword:sym<_Bool>    { <bool-keyword> }
+token keyword:sym<_Complex>	{ <complex-keyword> }
+token keyword:sym<_Generic> { <generic-keyword> }
+token keyword:sym<_Imaginary>     { <imaginary-keyword> }
+token keyword:sym<_Noreturn>      { <noreturn-keyword> }
+token keyword:sym<_Static_assert> { <static-assert-keyword> }
+token keyword:sym<_Thread_local>  { <thread-local-keyword> }
 
-token auto-keyword     { 'auto' }
-token break-keyword    { 'break' }
-token case-keyword     { 'case' }
-token char-keyword     { 'char' }
-token const-keyword    { 'const' }
-token continue-keyword { 'continue' }
-token default-keyword  { 'default' }
-token do-keyword       { 'do' }
-token double-keyword   { 'double' }
-token else-keyword     { 'else' }
-token enum-keyword     { 'enum' }
-token extern-keyword   { 'extern' }
-token float-keyword    { 'float' }
-token for-keyword      { 'for' }
-token goto-keyword     { 'goto' }
-token if-keyword       { 'if' }
-token inline-keyword   { 'inline' }
-token int-keyword      { 'int' }
-token long-keyword     { 'long' }
-token register-keyword { 'register' }
-token restrict-keyword { 'restrict' }
-token return-keyword   { 'return' }
-token short-keyword    { 'short' }
-token signed-keyword   { 'signed' }
-token sizeof-keyword   { 'sizeof' }
-token static-keyword   { 'static' }
-token struct-keyword   { 'struct' }
-token switch-keyword   { 'switch' }
-token typedef-keyword  { 'typedef' }
-token union-keyword    { 'union' }
-token unsigned-keyword { 'unsigned' }
-token void-keyword     { 'void' }
-token volatile-keyword { 'volatile' }
-token while-keyword    { 'while' }
+# Ancient keywords
+token auto-keyword     { 'auto' 	<!before <[_A..Za..z0..9]>> }
+token break-keyword    { 'break' 	<!before <[_A..Za..z0..9]>> }
+token case-keyword     { 'case' 	<!before <[_A..Za..z0..9]>> }
+token char-keyword     { 'char' 	<!before <[_A..Za..z0..9]>> }
+token const-keyword    { 'const' 	<!before <[_A..Za..z0..9]>> }
+token continue-keyword { 'continue' <!before <[_A..Za..z0..9]>> }
+token default-keyword  { 'default' 	<!before <[_A..Za..z0..9]>> }
+token do-keyword       { 'do' 		<!before <[_A..Za..z0..9]>> }
+token double-keyword   { 'double' 	<!before <[_A..Za..z0..9]>> }
+token else-keyword     { 'else' 	<!before <[_A..Za..z0..9]>> }
+token enum-keyword     { 'enum' 	<!before <[_A..Za..z0..9]>> }
+token extern-keyword   { 'extern' 	<!before <[_A..Za..z0..9]>> }
+token float-keyword    { 'float' 	<!before <[_A..Za..z0..9]>> }
+token for-keyword      { 'for' 		<!before <[_A..Za..z0..9]>> }
+token goto-keyword     { 'goto' 	<!before <[_A..Za..z0..9]>> }
+token if-keyword       { 'if' 		<!before <[_A..Za..z0..9]>> }
+token int-keyword      { 'int' 		<!before <[_A..Za..z0..9]>> }
+token long-keyword     { 'long' 	<!before <[_A..Za..z0..9]>> }
+token register-keyword { 'register' <!before <[_A..Za..z0..9]>> }
+token return-keyword   { 'return' 	<!before <[_A..Za..z0..9]>> }
+token short-keyword    { 'short' 	<!before <[_A..Za..z0..9]>> }
+token signed-keyword   { 'signed' 	<!before <[_A..Za..z0..9]>> }
+token sizeof-keyword   { 'sizeof' 	<!before <[_A..Za..z0..9]>> }
+token static-keyword   { 'static' 	<!before <[_A..Za..z0..9]>> }
+token struct-keyword   { 'struct' 	<!before <[_A..Za..z0..9]>> }
+token switch-keyword   { 'switch' 	<!before <[_A..Za..z0..9]>> }
+token typedef-keyword  { 'typedef' 	<!before <[_A..Za..z0..9]>> }
+token union-keyword    { 'union' 	<!before <[_A..Za..z0..9]>> }
+token unsigned-keyword { 'unsigned' <!before <[_A..Za..z0..9]>> }
+token void-keyword     { 'void' 	<!before <[_A..Za..z0..9]>> }
+token volatile-keyword { 'volatile' <!before <[_A..Za..z0..9]>> }
+token while-keyword    { 'while' 	<!before <[_A..Za..z0..9]>> }
 
-token alignas-keyword 		{ '_Alignas' || 'alignas' }
-token alignof-keyword 		{ '_Alignof' || 'alignof' }
-token atomic-keyword 		{ '_Atomic' || 'atomic' }
-token bool-keyword 			{ '_Bool' || 'bool' }
-token complex-keyword 		{ '_Complex' || 'complex' }
-token generic-keyword 		{ '_Generic' || 'generic' }
-token imaginary-keyword 	{ '_Imaginary' || 'imaginary' }
-token noreturn-keyword 		{ '_Noreturn' || 'noreturn' }
-token static-assert-keyword { '_Static_assert' || 'static_assert' }
-token thread-local-keyword  { '_Thread_local' || 'thread_local' }
+# Standard extension keywords
+token inline-keyword   		{ '_Inline' || 'inline' || '__inline' || '__inline__' } 		# C99
+token restrict-keyword 		{ '_Restrict' || 'restrict' || '__restrict' || '__restrict__' } # C99
+token alignas-keyword 		{ '_Alignas' || 'alignas' <!before <[_A..Za..z0..9]>> } 		# C11
+token alignof-keyword 		{ '_Alignof' || 'alignof' <!before <[_A..Za..z0..9]>> } 		# C11
+token atomic-keyword 		{ '_Atomic' || 'atomic' <!before <[_A..Za..z0..9]>> }   		# C11
+token bool-keyword 			{ '_Bool' || 'bool' <!before <[_A..Za..z0..9]>> }				# C99
+token complex-keyword 		{ '_Complex' || 'complex' <!before <[_A..Za..z0..9]>> } 		# C99
+token generic-keyword 		{ '_Generic' || 'generic' <!before <[_A..Za..z0..9]>> } 		# C11
+token imaginary-keyword 	{ '_Imaginary' || 'imaginary' <!before <[_A..Za..z0..9]>> }		# C99
+token noreturn-keyword 		{ '_Noreturn' || 'noreturn' <!before <[_A..Za..z0..9]>> }		# C11
+token static-assert-keyword { '_Static_assert' || 'static_assert' } 						# C11
+token thread-local-keyword  { '_Thread_local' || 'thread_local' }							# C11
+token accum-keyword         { '_Accum' <!before <[_A..Za..z0..9]>> }						# DSP
+token fract-keyword         { '_Fract' <!before <[_A..Za..z0..9]>> }						# DSP
+token sat-keyword           { '_Sat'   <!before <[_A..Za..z0..9]>> }						# DSP
 
-token asm-keyword  			{ '__asm__' || '__asm' || 'asm' }
-token attribute-keyword 	{ '__attribute__' }
-token block-keyword         { '__block' }
-token typeof-keyword        { '__typeof__' || 'typeof' }
+# Nonstandard extension keywords
+token asm-keyword  			{ '__asm__' || '__asm' || 'asm' <!before <[_A..Za..z0..9]>> }	# C++
+token attribute-keyword 	{ '__attribute__' }												# GNU
+token block-keyword         { '__block' }													# Apple
+token typeof-keyword        { '__typeof__' || 'typeof' <!before <[_A..Za..z0..9]>> }		# GNU
+token offsetof-keyword      { '__builtin_offsetof' }                						# GNU
+
+
+############################################################
+##
+##  Identifiers
+##
 
 # SS 6.4.2.1
 
 # Standard name: identifier
 # Nonstandard name: ident
 # Rationale: 'ident' is more Perl-ish
-token ident { 
+token ident {
     <!before <keyword>>
 	$<name>=(<.ident-first> <.ident-rest>*)
 }
@@ -161,7 +180,14 @@ token ident-rest:sym<digit> { <.digit> }
 ##token digit { <[0..9]> }
 ##token alpha { <[a..zA..Z]> }
 
+
+############################################################
+##
+##  Constants
+##
+
 # SS 6.4.3
+
 proto token universal-character-name {*}
 token universal-character-name:sym<u> { '\\u' <xdigit> ** 4 }
 token universal-character-name:sym<U> { '\\U' <xdigit> ** 8 }
@@ -182,6 +208,7 @@ token constant:sym<character> {
 }
 
 # SS 6.4.4.1
+
 token integer-constant { <integer-value> <integer-suffix>* }
 
 # Nonstandard: integer-value does not exist in C89 grammar
@@ -211,7 +238,7 @@ token floating-constant:radix<10> { <decimal-floating-constant> }
 token floating-constant:radix<16> { <hexadecimal-floating-constant> }
 
 proto token decimal-floating-constant {*}
-token decimal-floating-constant:sym<9.9> { 
+token decimal-floating-constant:sym<9.9> {
       <fractional-constant> <exponent-part>? <floating-suffix>?
 }
 token decimal-floating-constant:sym<9e9> {
@@ -219,16 +246,16 @@ token decimal-floating-constant:sym<9e9> {
 }
 
 proto token hexadecimal-floating-constant {*}
-token hexadecimal-floating-constant:sym<F.F> { 
-      <hexadecimal-prefix> 
-      <hexadecimal-fractional-constant> 
-      <binary-exponent-part> 
+token hexadecimal-floating-constant:sym<F.F> {
+      <hexadecimal-prefix>
+      <hexadecimal-fractional-constant>
+      <binary-exponent-part>
       <floating-suffix>?
 }
-token hexadecimal-floating-constant:sym<FpF> {  
-      <hexadecimal-prefix> 
+token hexadecimal-floating-constant:sym<FpF> {
+      <hexadecimal-prefix>
       <hexadecimal-digit-sequence>
-      <binary-exponent-part> 
+      <binary-exponent-part>
       <floating-suffix>?
 }
 
@@ -237,7 +264,7 @@ token fractional-constant:sym<9.9> {
       <digit-sequence>? '.' <digit-sequence>
 }
 token fractional-constant:sym<9.> {
-      <digit-sequence> '.' 
+      <digit-sequence> '.'
 }
 
 token exponent-part { <[eE]> <sign>? <digit-sequence> }
@@ -316,6 +343,11 @@ token s-char:sym<escape> { <escape-sequence> }
 
 rule string-constant { [<string-literal> <.ws>]+ }
 
+############################################################
+##
+##  Operators
+##
+
 # punctuator
 proto token punct {*}
 token punct:sym<pp(> { '(' } # TODO: check for <ws>
@@ -393,4 +425,3 @@ token punct:sym<##>  { <sym> | '%:%:' }
 ##token pp-number-rest:sym<E> { <[eE]> <sign> }
 ##token pp-number-rest:sym<P> { <[pP]> <sign> }
 ##token pp-number-rest:sym<,> { '.' }
-
