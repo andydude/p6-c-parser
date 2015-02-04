@@ -462,6 +462,9 @@ rule storage-class-specifier:sym<register> { <sym> }
 
 # SS 6.7.2
 proto rule type-specifier {*}
+rule type-specifier:sym<typedef-name>    {
+    <typedef-name>
+}
 rule type-specifier:sym<void>     { <void-keyword> }
 rule type-specifier:sym<char>     { <char-keyword> }
 rule type-specifier:sym<short>    { <short-keyword> }
@@ -484,9 +487,6 @@ rule type-specifier:sym<struct-or-union> {
 }
 rule type-specifier:sym<enum-specifier>  {
     <enum-specifier>
-}
-rule type-specifier:sym<typedef-name>    {
-    <typedef-name>
 }
 
 rule type-specifier:sym<__typeof__> { # GNU
