@@ -444,12 +444,12 @@ method declaration:sym<static_assert>($/) { # C11
 method declaration-specifiers($/) {
     my @children = map {$_.ast}, @<declaration-specifier>;
     my %classes = @children.classify({ $_ ~~ Spec ?? 'spec' !! 'type' });
-
-
+    
     if %classes{'spec'}:exists and %classes{'type'}:exists {
         my $specs = C::AST::Specs.new(children => %classes{'spec'}.list);
         @children = %classes{'type'}.list;
         @children.unshift($specs);
+        @children = @children.grep({$_ !=== Nil});
         make C::AST::TypeOp.new(
             op => TyKind::declaration_specifiers,
             children => @children);
@@ -485,6 +485,10 @@ method declaration-specifier:sym<function>($/) {
 
 method declaration-specifier:sym<alignment>($/) {
     make $<alignment-specifier>.ast;
+}
+
+method declaration-specifier:sym<__attribute__>($/) {
+    make Nil;
 }
 
 method init-declarator-list($/) {
@@ -604,7 +608,14 @@ method struct-declaration:sym<static_assert>($/) { # C11
 }
 
 method specifier-qualifier-list($/) {
-    make C::AST::Specs.new(children => map {$_.ast}, @<specifier-qualifier>);
+    # TODO
+    my @quals = map {$_.ast}, @<specifier-qualifier>;
+    my @specs = @quals.grep({$_.WHAT === Spec});
+    @specs = C::AST::Specs.new(children => @specs);
+    my @children = @quals.grep({$_.WHAT !=== Spec});
+    @children.unshift(@specs);
+    my $op = TyKind::specifier_qualifier_list;
+    make C::AST::TypeOp.new(:$op, :@children);
 }
 
 method specifier-qualifier:sym<type-specifier>($/) {
@@ -693,6 +704,7 @@ method declarator:sym<direct>($/) {
 method direct-declarator($/) {
     my $op = TyKind::direct_declarator;
     my @children = map {$_.ast}, @<direct-declarator-rest>;
+    @children = @children.grep(* !=== Nil);
     if @children.elems > 0 {
         @children.unshift($<direct-declarator-first>.ast);
         make C::AST::TypeOp.new(:$op, :@children);
@@ -716,7 +728,7 @@ method direct-declarator-rest:sym<b-assignment-expression>($/) {
         !! TyKind::array_designator;
     my @children = $<type-qualifier-list> ?? $<type-qualifier-list>.ast !! ();
     if $<assignment-expression> {
-        my $size = C::AST::Size.new(value => $<assignment-expression>.ast.value);
+        my $size = C::AST::Size.new(value => $<assignment-expression>.ast);
         @children.unshift($size) ;
     }
     make C::AST::TypeOp.new(:$op, :@children);
@@ -729,7 +741,7 @@ method direct-declarator-rest:sym<b-static-type-qualifier>($/) {
     my @children = $<type-qualifier-list> ?? $<type-qualifier-list>.ast !! ();
     @children.unshift($<static-keyword>.ast) if $<static-keyword>;
     if $<assignment-expression> {
-        my $size = C::AST::Size.new(value => $<assignment-expression>.ast.value);
+        my $size = C::AST::Size.new(value => $<assignment-expression>.ast);
         @children.unshift($size) ;
     }
     make C::AST::TypeOp.new(:$op, :@children);
@@ -741,7 +753,7 @@ method direct-declarator-rest:sym<b-type-qualifier-static>($/) {
     my @children = $<type-qualifier-list> ?? $<type-qualifier-list>.ast !! ();
     @children.unshift($<static-keyword>.ast) if $<static-keyword>;
     if $<assignment-expression> {
-        my $size = C::AST::Size.new(value => $<assignment-expression>.ast.value);
+        my $size = C::AST::Size.new(value => $<assignment-expression>.ast);
         @children.unshift($size) ;
     }
     make C::AST::TypeOp.new(:$op, :@children);
@@ -762,8 +774,12 @@ method direct-declarator-rest:sym<p-identifier-list>($/) {
     my @children = $<identifier-list> ?? $<identifier-list>.ast !! ();
     make C::AST::TypeOp.new(:$op, :@children);
 }
-
-
+method direct-declarator-rest:sym<__asm__>($/) {
+    make Nil; #$<attribute>;
+}
+method direct-declarator-rest:sym<__attribute__>($/) {
+    make Nil; #$<attribute>;
+}
 
 method pointer:sym<pointer>($/) {
     #my @children = $<type-qualifier-list> ?? $<type-qualifier-list>.ast !! ();
@@ -787,7 +803,13 @@ method type-qualifier-list($/) {
 
 method parameter-type-list:sym<std>($/) {
     # TODO: check for ellipsis
-    make $<parameter-list>.ast
+    my $ast = $<parameter-list>.ast;
+    if $<ellipsis> {
+        make C::AST::TypeOp.new(
+            op => TyKind::ellipsis_function_type,
+            children => $ast.children);
+    }
+    else { make $ast; }
 }
 
 method parameter-list($/) {
@@ -834,10 +856,16 @@ method abstract-declarator:sym<direct-abstract>($/) {
 }
 
 method direct-abstract-declarator($/) {
-    #make Arg.new(
-    #    first => $<direct-abstract-declarator-first>,
-    #        rest => @<direct-abstract-declarator-rest>)
-    make C::AST::Name.new("abstract?!?")
+    my $op = TyKind::direct_abstract_declarator;
+    my @children = map {$_.ast}, @<direct-abstract-declarator-rest>;
+    @children = @children.grep(* !=== Nil);
+    if @children.elems > 0 {
+        @children.unshift($<direct-abstract-declarator-first>.ast);
+        make C::AST::TypeOp.new(:$op, :@children);
+    }
+    else {
+        make $<direct-abstract-declarator-first>.ast;
+    }
 }
 method direct-abstract-declarator-first:sym<abstract>($/)  {
     make $<abstract-declarator>.ast;
@@ -872,6 +900,7 @@ method direct-abstract-declarator-first:sym<abstract>($/)  {
 #}
 
 method direct-abstract-declarator-rest:sym<p-parameter-type-list>($/) {
+    # TODO
     make $<parameter-type-list>.ast;
 }
 
@@ -1018,6 +1047,7 @@ method jump-statement:sym<return>($/) {
 
 method translation-unit($/) {
     my @children = map {$_.ast}, @<external-declaration>;
+    @children = @children.grep({$_ !=== Nil});
     make C::AST::TransUnit.new(:@children);
 }
 
@@ -1027,6 +1057,9 @@ method external-declaration:sym<function-definition>($/) {
 
 method external-declaration:sym<declaration>($/) {
     make $<declaration>.ast;
+}
+method external-declaration:sym<__asm__>($/) {
+    make Nil; #$<assembly>
 }
 
 # SS 6.9.1

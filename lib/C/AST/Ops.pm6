@@ -103,11 +103,13 @@ enum TyKind is export <
     attribute 
     declaration
     declaration_specifiers
+    direct_abstract_declarator
     direct_declarator
     direct_type
     enum_declaration
     enum_type
     enumerator
+    ellipsis_function_type
     fixed_length_array_designator
     fixed_length_array_type
     function_declaration
@@ -118,12 +120,14 @@ enum TyKind is export <
     parameter_declaration
     pointer_declarator
     pointer_type
+    specifier_qualifier_list
+    static_assert_declaration
     struct_bit_declarator
     struct_declaration
     struct_declarator
     struct_designator
     struct_type
-    static_assert_declaration
+    type_name
     typeof_expr
     union_declaration
     union_declarator

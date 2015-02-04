@@ -37,12 +37,14 @@ class Op is Node does Operation does Compound {
     has Compound @.children;
 }
 
-class TypeOp is Node does Operation does External {
+class TypeOp is Node does Operation does Compound does External {
     has TyKind $.op;
     has External @.children;
 }
 
-class Size is IntVal does External {}
+class Size is Node does External {
+    has Compound $.value;
+}
 
 class Name is Node does Compound does External {
     has Str $.name;
