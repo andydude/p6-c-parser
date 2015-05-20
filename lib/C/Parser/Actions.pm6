@@ -3,7 +3,7 @@ use C::AST;
 use C::AST::Ops;
 use C::AST::Utils;
 use C::Parser::Utils;
-class C::Parser::Actions;
+unit class C::Parser::Actions;
 
 method TOP($/) {
     make $/.values.[0].ast;

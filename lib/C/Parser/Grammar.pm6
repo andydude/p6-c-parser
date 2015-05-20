@@ -3,7 +3,7 @@ use v6;
 #use Grammar::Tracer;
 use C::Parser::Lexer;
 use C::Parser::Utils;
-grammar C::Parser::Grammar is C::Parser::Lexer;
+unit grammar C::Parser::Grammar is C::Parser::Lexer;
 
 rule TOP {
 	^ <.ws> <translation-unit>
