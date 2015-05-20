@@ -820,13 +820,19 @@ method parameter-list($/) {
 }
 
 method parameter-declaration:sym<declarator>($/) {
-    my $type = C::AST::Utils::synthesize_declaration($<declaration-specifiers>.ast, $<declarator>.ast);
-    my $name = C::AST::Utils::get_declarator_name($<declarator>);
-    make C::AST::Arg.new(:$name, :$type);
+    if $<declarator>.ast {
+    	my $type = C::AST::Utils::synthesize_declaration($<declaration-specifiers>.ast, $<declarator>.ast);
+    	my $name = C::AST::Utils::get_declarator_name($<declarator>);
+    	make C::AST::Arg.new(:$name, :$type);
+    }
+    else {
+        my $type = $<declaration-specifiers>.ast;
+    	make C::AST::Arg.new(:$type);
+	}
 }
 
 method parameter-declaration:sym<abstract>($/) {
-    if $<declarator> {
+    if $<declarator>.ast {
         my $type = C::AST::Utils::synthesize_declaration($<declaration-specifiers>.ast, $<declarator>.ast);
         my $name = C::AST::Utils::get_declarator_name($<declarator>);
         make C::AST::Arg.new(:$name, :$type);
