@@ -30,7 +30,7 @@ sub context_is(Str $ctx --> Bool) {
     if @*CONTEXTS.elems < 1 {
         return False;
     }
-    if @*CONTEXTS[*-1] ne $ctx {
+    if @*CONTEXTS[*-1].gist ne $ctx {
         return False;
     }
     return True;
