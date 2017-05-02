@@ -1,6 +1,6 @@
 {
         "name" : "C::Parser",
-        "version" : "0.3.1",
+        "version" : "0.3.2",
         "description" : "Grammar for Parsing C in Perl6",
         "author" : "Andrew Robbins",
         "build-depends" : [ ],

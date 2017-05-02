@@ -568,6 +568,10 @@ method type-specifier:sym<typedef-name>($/) {
     make $<typedef-name>.ast;
 }
 
+method type-specifier:sym<__extension__>($/) { # GNU
+    make Spec::extension;
+}
+
 # SS 6.7.2.1
 method struct-or-union-specifier:sym<decl>($/) {
     our $op = Nil;
