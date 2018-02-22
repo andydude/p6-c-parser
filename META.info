@@ -10,7 +10,6 @@
         "depends" : [ ],
         "provides" : {
                 "C::Parser::Lexer" : "lib/C/Parser/Lexer.pm6",
-                "C::Parser::Actions" : "lib/C/Parser/Actions.pm6",
                 "C::Parser::Utils" : "lib/C/Parser/Utils.pm6",
                 "C::Parser::Grammar" : "lib/C/Parser/Grammar.pm6",
                 "C::AST::Ops" : "lib/C/AST/Ops.pm6",
