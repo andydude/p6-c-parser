@@ -2,7 +2,7 @@
         "perl" : "6.*",
         "name" : "C::Parser",
         "version" : "0.3.2",
-	"license" : "LGPL-3.0+",
+	"license" : "LGPL-3.0-or-later",
         "description" : "Grammar for Parsing C in Perl6",
         "author" : "Andrew Robbins",
         "build-depends" : [ ],
